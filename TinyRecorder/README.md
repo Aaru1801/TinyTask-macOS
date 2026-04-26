@@ -14,9 +14,16 @@ macOS doesn't ship a built-in macro recorder. This is one. No subscription, no t
 - 📤 Export as a self-running `.command` script
 - 🔒 Native Carbon hotkeys + CGEventTap — no Electron, no kexts
 
-## Build
+## Build from source
+
+> **Why build from source?**  
+> macOS Gatekeeper blocks apps that are not signed with a paid Apple Developer ID certificate and notarized by Apple. Any pre-built binary downloaded from the internet will be quarantined and show the *"… is damaged and can't be opened"* error — even if the binary itself is fine. Building locally avoids this entirely because the quarantine flag is never set on files you compile yourself.
+
+**Requirements:** macOS 13+, Xcode Command Line Tools (`xcode-select --install`)
 
 ```bash
+git clone https://github.com/Aaru1801/TinyTask-macOS.git
+cd TinyTask-macOS/TinyRecorder
 ./build.sh
 open TinyRecorder.app
 ```
@@ -27,6 +34,20 @@ For best results, move the app to `/Applications` after the first build:
 ```bash
 mv TinyRecorder.app /Applications/
 ```
+
+## Troubleshooting — "… is damaged and can't be opened"
+
+This is a macOS Gatekeeper error, **not** an actual corruption. It appears when a `.app` downloaded from the internet is not signed with an Apple Developer certificate and notarized.
+
+**Recommended fix — build from source (see above).** This is the most reliable approach.
+
+**Alternative — strip the quarantine flag** (if you downloaded a pre-built release):
+```bash
+xattr -cr TinyRecorder.app
+```
+Then try opening the app again. If macOS still blocks it, right-click the app → **Open** → **Open** in the dialog.
+
+If you see a *"macOS cannot verify the developer"* dialog instead of the "damaged" message, right-click the app → **Open** → **Open** to bypass the one-time Gatekeeper prompt.
 
 ## First launch
 
