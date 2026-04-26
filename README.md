@@ -8,11 +8,10 @@ macOS doesn't ship a built-in macro recorder. This is one. No subscription, no t
 
 - 🎬 Record full mouse + keyboard input (clicks, drags, moves, modifier keys, scroll)
 - ▶️ Play it back, optionally looped, at 0.5× / 1× / 2× / 4× speed
-- 📋 Sits in the menu bar with a designed popover UI (no flat dropdown)
+- 📋 Sits in the menu bar with a designed popover UI
 - ⌨️ Global hotkeys: **F6** record/stop, **F7** stop everything, **F8** play (configurable)
 - 💾 Save / open `.tinyrec` macros (plain JSON, version-stamped)
 - 📤 Export as a self-running `.command` script
-- 🔒 Native Carbon hotkeys + CGEventTap — no Electron, no kexts
 
 ## First launch
 
