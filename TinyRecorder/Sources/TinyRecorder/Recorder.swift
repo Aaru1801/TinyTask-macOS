@@ -29,6 +29,64 @@ final class Recorder: ObservableObject {
         liveDuration = new.last?.time ?? 0
     }
 
+    // MARK: - Editing
+
+    func deleteEvents(at indices: IndexSet) {
+        let sorted = indices.sorted(by: >)
+        for i in sorted where events.indices.contains(i) {
+            events.remove(at: i)
+        }
+        liveDuration = events.last?.time ?? 0
+    }
+
+    func updateEvent(at index: Int, with new: RecordedEvent) {
+        guard events.indices.contains(index) else { return }
+        events[index] = new
+        events.sort { $0.time < $1.time }
+        liveDuration = events.last?.time ?? 0
+    }
+
+    /// Stretch (>1) or compress (<1) the timestamps of every event.
+    func scaleTime(by factor: Double) {
+        let f = max(0.01, factor)
+        for i in events.indices {
+            events[i].time *= f
+        }
+        liveDuration = events.last?.time ?? 0
+    }
+
+    /// Add or subtract a constant from the timestamps of selected events.
+    func shiftTime(of indices: IndexSet, by delta: TimeInterval) {
+        for i in indices where events.indices.contains(i) {
+            events[i].time = max(0, events[i].time + delta)
+        }
+        events.sort { $0.time < $1.time }
+        liveDuration = events.last?.time ?? 0
+    }
+
+    /// Drop everything before `index` and rebase remaining timestamps to start at 0.
+    func trimBefore(index: Int) {
+        guard events.indices.contains(index), index > 0 else { return }
+        let cutoff = events[index].time
+        events.removeFirst(index)
+        for i in events.indices {
+            events[i].time = max(0, events[i].time - cutoff)
+        }
+        liveDuration = events.last?.time ?? 0
+    }
+
+    /// Drop everything after `index`.
+    func trimAfter(index: Int) {
+        guard events.indices.contains(index), index < events.count - 1 else { return }
+        events.removeSubrange((index + 1)..<events.count)
+        liveDuration = events.last?.time ?? 0
+    }
+
+    func clearAll() {
+        events.removeAll()
+        liveDuration = 0
+    }
+
     @discardableResult
     func startRecording() -> Bool {
         guard !isRecording else { return true }

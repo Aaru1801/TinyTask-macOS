@@ -37,19 +37,22 @@ struct RecordedEvent: Codable, Equatable {
         }
     }
 
-    let kind: Kind
+    var kind: Kind
     /// Seconds since the start of the recording.
-    let time: TimeInterval
-    let x: CGFloat
-    let y: CGFloat
-    let keyCode: UInt16
-    let flags: UInt64
-    let mouseButton: Int64
-    let clickCount: Int64
-    let scrollDeltaY: Int32
-    let scrollDeltaX: Int32
+    var time: TimeInterval
+    var x: CGFloat
+    var y: CGFloat
+    var keyCode: UInt16
+    var flags: UInt64
+    var mouseButton: Int64
+    var clickCount: Int64
+    var scrollDeltaY: Int32
+    var scrollDeltaX: Int32
 
-    var location: CGPoint { CGPoint(x: x, y: y) }
+    var location: CGPoint {
+        get { CGPoint(x: x, y: y) }
+        set { x = newValue.x; y = newValue.y }
+    }
 }
 
 struct Macro: Codable {

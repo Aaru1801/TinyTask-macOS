@@ -19,7 +19,7 @@ struct PopoverContentView: View {
                 }
                 StatsCard()
                 ActionRow(controller: controller)
-                MacroCard()
+                MacroCard(controller: controller)
                 StatusLine()
                 Spacer(minLength: 0)
                 BottomBar(controller: controller)
@@ -307,6 +307,7 @@ private struct CircleAction: View {
 // MARK: - Macro card (current recording info)
 
 private struct MacroCard: View {
+    let controller: MenuBarController
     @EnvironmentObject var recorder: Recorder
     @EnvironmentObject var player: Player
     @EnvironmentObject var state: AppState
@@ -336,6 +337,24 @@ private struct MacroCard: View {
                         .lineLimit(1)
                         .truncationMode(.middle)
                 }
+                Button {
+                    controller.openEditor()
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "slider.horizontal.below.rectangle")
+                            .font(.system(size: 10, weight: .semibold))
+                        Text("Edit")
+                            .font(.system(size: 10, weight: .semibold))
+                    }
+                    .foregroundColor(recorder.events.isEmpty ? .gray.opacity(0.45) : .white)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(
+                        Capsule().fill(Color(white: recorder.events.isEmpty ? 0.07 : 0.18))
+                    )
+                }
+                .buttonStyle(.plain)
+                .disabled(recorder.events.isEmpty)
             }
 
             HStack(spacing: 10) {
