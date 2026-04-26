@@ -50,4 +50,4 @@ Change the bindings in **Prefs → Hotkeys**. The app prevents your hotkey from 
 
 ## License
 
-GPL.
+MIT.
