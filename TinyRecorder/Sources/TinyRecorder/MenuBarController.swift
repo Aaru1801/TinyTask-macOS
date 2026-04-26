@@ -8,6 +8,7 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
     private let popover = NSPopover()
     private var globalClickMonitor: Any?
     private var cancellables: Set<AnyCancellable> = []
+    private var editorWC: EditorWindowController?
 
     let recorder = Recorder()
     let player = Player()
@@ -287,6 +288,19 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
     }
 
     // MARK: - Misc
+
+    func openEditor() {
+        if popover.isShown { popover.performClose(nil) }
+        if editorWC == nil {
+            let view = EditorView(controller: self)
+                .environmentObject(recorder)
+                .environmentObject(player)
+            editorWC = EditorWindowController(rootView: view)
+        }
+        NSApp.activate(ignoringOtherApps: true)
+        editorWC?.showWindow(nil)
+        editorWC?.window?.makeKeyAndOrderFront(nil)
+    }
 
     func openAccessibilityPrefs() {
         if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
