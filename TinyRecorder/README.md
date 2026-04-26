@@ -8,25 +8,10 @@ macOS doesn't ship a built-in macro recorder. This is one. No subscription, no t
 
 - 🎬 Record full mouse + keyboard input (clicks, drags, moves, modifier keys, scroll)
 - ▶️ Play it back, optionally looped, at 0.5× / 1× / 2× / 4× speed
-- 📋 Sits in the menu bar with a designed popover UI (no flat dropdown)
+- 📋 Sits in the menu bar with a designed popover UI
 - ⌨️ Global hotkeys: **F6** record/stop, **F7** stop everything, **F8** play (configurable)
 - 💾 Save / open `.tinyrec` macros (plain JSON, version-stamped)
 - 📤 Export as a self-running `.command` script
-- 🔒 Native Carbon hotkeys + CGEventTap — no Electron, no kexts
-
-## Build
-
-```bash
-./build.sh
-open TinyRecorder.app
-```
-
-The build script compiles with `swift build -c release`, assembles a proper `.app` bundle (with `LSUIElement = true` so it's menu-bar only), and ad-hoc signs it so macOS keeps your Accessibility approval across rebuilds.
-
-For best results, move the app to `/Applications` after the first build:
-```bash
-mv TinyRecorder.app /Applications/
-```
 
 ## First launch
 
@@ -56,43 +41,6 @@ Use **Save** to write the macro to a `.tinyrec` file, **Open** to load one, and 
 | Play | **F8** | plays current macro |
 
 Change the bindings in **Prefs → Hotkeys**. The app prevents your hotkey from being captured into the recording.
-
-## File format
-
-`.tinyrec` is a JSON document:
-
-```json
-{
-  "createdAt": 766094400,
-  "version": 1,
-  "events": [
-    { "kind": 5, "time": 0.012, "x": 412.0, "y": 188.0, "keyCode": 0,
-      "flags": 256, "mouseButton": 0, "clickCount": 0, "scrollDeltaY": 0, "scrollDeltaX": 0 },
-    ...
-  ]
-}
-```
-
-## CLI
-
-```bash
-TinyRecorder.app/Contents/MacOS/TinyRecorder --play /path/to/macro.tinyrec
-```
-
-This is what exported `.command` scripts call internally.
-
-## Architecture
-
-| File | Responsibility |
-| --- | --- |
-| `main.swift` | Entry; CLI playback dispatch; NSApp setup |
-| `AppDelegate.swift` | Activation policy + Accessibility prompt |
-| `MenuBarController.swift` | Status item, popover, save/open/export plumbing |
-| `Recorder.swift` | `CGEvent.tapCreate(.cgSessionEventTap, .listenOnly, ...)` capture |
-| `Player.swift` | `CGEvent.post(...)` playback w/ loop + speed |
-| `HotkeyManager.swift` | Carbon `RegisterEventHotKey` global hotkeys |
-| `AppState.swift` | UserDefaults-backed settings + permission watcher |
-| `PopoverContentView.swift` | SwiftUI UI |
 
 ## Known limits
 
