@@ -186,11 +186,12 @@ private struct EditorToolbar: View {
 
                 // Export
                 Button(action: onExport) {
-                    Label("Export…", systemImage: "square.and.arrow.up")
+                    Label("Export Shell Script…", systemImage: "square.and.arrow.up")
                         .font(.system(size: 11.5, weight: .medium))
                 }
                 .controlSize(.regular)
                 .buttonStyle(.bordered)
+                .help("Exports a double-clickable .command script")
 
                 // Play / Stop
                 Button {
@@ -266,9 +267,9 @@ private struct EditorTimeline: View {
                                 : 0
                             let isImpact = ev.kind == .leftMouseDown || ev.kind == .rightMouseDown ||
                                            ev.kind == .keyDown
-                            Rectangle()
-                                .fill(eventColor(for: ev.kind))
-                                .frame(width: isImpact ? 1.6 : 1, height: isImpact ? h * 0.85 : h * 0.45)
+                            RoundedRectangle(cornerRadius: 1, style: .continuous)
+                                .fill(eventColor(for: ev.kind).opacity(isImpact ? 1.0 : 0.7))
+                                .frame(width: isImpact ? 2 : 1.2, height: isImpact ? h * 0.85 : h * 0.45)
                                 .position(x: x, y: h / 2)
                         }
                     }

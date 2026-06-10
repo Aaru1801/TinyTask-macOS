@@ -64,11 +64,23 @@ struct PopoverContentView: View {
                 .ignoresSafeArea()
 
             if isWindow {
-                HStack(spacing: 0) {
-                    LibrarySidebar(filter: $filter)
-                        .frame(width: 200)
-                    Divider().opacity(0.5)
-                    libraryColumn
+                VStack(spacing: 0) {
+                    // Custom titlebar strip: wordmark centered, traffic lights
+                    // live in the leading inset.
+                    ZStack {
+                        Wordmark(size: 13)
+                    }
+                    .frame(height: 38)
+                    .frame(maxWidth: .infinity)
+                    .background(VisualEffectBackground(material: .titlebar, blendingMode: .withinWindow))
+                    .overlay(Divider().opacity(0.5), alignment: .bottom)
+
+                    HStack(spacing: 0) {
+                        LibrarySidebar(filter: $filter)
+                            .frame(width: 200)
+                        Divider().opacity(0.5)
+                        libraryColumn
+                    }
                 }
             } else {
                 libraryColumn
@@ -225,6 +237,13 @@ struct PopoverContentView: View {
                 .transition(.move(edge: .top).combined(with: .opacity))
             }
 
+            // Filter chips — brings the window sidebar's filters to the popover.
+            if !isWindow {
+                FilterChipRow(filter: $filter, tags: library.allTags)
+                    .padding(.horizontal, 12)
+                    .padding(.bottom, 8)
+            }
+
             if filteredMacros.isEmpty {
                 EmptyState(filter: filter, hasSearch: !search.isEmpty)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -232,6 +251,22 @@ struct PopoverContentView: View {
                 // Computed once for the whole grid, not per card.
                 let allChainCandidates = library.macros.map { ($0.id, $0.name) }
                 ScrollView {
+                    // Section label, mockup-style.
+                    HStack {
+                        Text(filter.label.uppercased())
+                            .font(.system(size: 10, weight: .semibold))
+                            .tracking(0.8)
+                            .foregroundStyle(.secondary)
+                        Text("\(filteredMacros.count)")
+                            .font(.system(size: 9.5, weight: .semibold, design: .monospaced))
+                            .foregroundStyle(.tertiary)
+                            .contentTransition(.numericText())
+                        Spacer()
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.top, 2)
+                    .padding(.bottom, 6)
+
                     LazyVGrid(
                         columns: isWindow
                             ? [GridItem(.adaptive(minimum: 200, maximum: 260), spacing: 10)]
@@ -374,6 +409,66 @@ struct PopoverContentView: View {
             lastAnchorID = macro.id
             controller.selectMacro(macro.id)
         }
+    }
+}
+
+// MARK: - Filter chips (popover mode)
+
+private struct FilterChipRow: View {
+    @Binding var filter: LibraryFilter
+    let tags: [String]
+
+    private let primaryFilters: [LibraryFilter] = [.all, .favorites, .recent]
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                ForEach(primaryFilters, id: \.self) { item in
+                    chip(item)
+                }
+                if !tags.isEmpty {
+                    Rectangle()
+                        .fill(Color.primary.opacity(0.12))
+                        .frame(width: 1, height: 14)
+                    ForEach(tags, id: \.self) { t in
+                        chip(.tag(t))
+                    }
+                }
+            }
+            .padding(.vertical, 1)
+        }
+    }
+
+    @ViewBuilder
+    private func chip(_ item: LibraryFilter) -> some View {
+        let selected = filter == item
+        Button {
+            withAnimation(Brand.spring) { filter = item }
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: item.systemImage)
+                    .font(.system(size: 8.5, weight: .semibold))
+                Text(item.label)
+                    .font(.system(size: 10.5, weight: selected ? .semibold : .medium))
+            }
+            .foregroundStyle(selected ? AnyShapeStyle(.white) : AnyShapeStyle(.secondary))
+            .padding(.horizontal, 9)
+            .padding(.vertical, 4.5)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(selected ? AnyShapeStyle(Brand.redGradient) : AnyShapeStyle(Color.primary.opacity(0.06)))
+                    .overlay(
+                        Capsule(style: .continuous)
+                            .strokeBorder(
+                                selected ? Color.white.opacity(0.20) : Color.primary.opacity(0.10),
+                                lineWidth: 0.5
+                            )
+                    )
+            )
+        }
+        .buttonStyle(HoverPressButtonStyle(hoverScale: 1.05))
+        .accessibilityLabel("Filter: \(item.label)")
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }
 
@@ -558,15 +653,7 @@ private struct LibraryHeader: View {
                 .padding(.vertical, 6.5)
                 .background(
                     Capsule(style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    Color(red: 0.97, green: 0.32, blue: 0.32),
-                                    Color(red: 0.78, green: 0.13, blue: 0.13),
-                                ],
-                                startPoint: .top, endPoint: .bottom
-                            )
-                        )
+                        .fill(Brand.redGradient)
                         .overlay(
                             Capsule(style: .continuous)
                                 .strokeBorder(.white.opacity(0.22), lineWidth: 0.5)
@@ -575,6 +662,7 @@ private struct LibraryHeader: View {
                 )
             }
             .buttonStyle(HoverPressButtonStyle(hoverScale: 1.04))
+            .accessibilityLabel(recorder.isRecording ? "Stop recording" : "Start recording")
         }
     }
 }
@@ -746,22 +834,32 @@ private struct MacroCard: View {
 
     private var styledCard: some View {
         cardContent
-            .padding(10)
-            .frame(height: macro.tags.isEmpty ? 100 : 122)
+            .padding(11)
+            .frame(height: macro.tags.isEmpty ? 102 : 124)
             .background(
-                RoundedRectangle(cornerRadius: 11, style: .continuous)
-                    .fill(Color.primary.opacity(isSelected ? 0.10 : (isCurrent ? 0.07 : 0.04)))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 11, style: .continuous)
-                            .strokeBorder(strokeColor, lineWidth: isSelected ? 1.4 : (isCurrent ? 1.0 : 0.5))
-                    )
-                    .shadow(color: .black.opacity(hovered ? 0.18 : 0.06), radius: hovered ? 6 : 2, y: 2)
+                ZStack {
+                    // Opaque adaptive surface: white card in light mode,
+                    // elevated gray in dark — the mockup look.
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Color(nsColor: .controlBackgroundColor))
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Color.primary.opacity(isSelected ? 0.07 : (isCurrent ? 0.045 : 0.02)))
+                }
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .strokeBorder(strokeColor, lineWidth: isSelected ? 1.4 : (isCurrent ? 1.0 : 0.5))
+                )
+                .shadow(
+                    color: .black.opacity(hovered ? 0.16 : 0.07),
+                    radius: hovered ? 7 : 3,
+                    y: hovered ? 3 : 1.5
+                )
             )
-            .scaleEffect(hovered ? 1.01 : 1.0)
+            .scaleEffect(hovered ? 1.012 : 1.0)
             .animation(.spring(response: 0.25, dampingFraction: 0.85), value: hovered)
-            .animation(.spring(response: 0.3, dampingFraction: 0.85), value: isCurrent)
-            .animation(.spring(response: 0.3, dampingFraction: 0.85), value: isSelected)
-            .animation(.spring(response: 0.3, dampingFraction: 0.85), value: dragOver)
+            .animation(Brand.spring, value: isCurrent)
+            .animation(Brand.spring, value: isSelected)
+            .animation(Brand.spring, value: dragOver)
     }
 
     @ViewBuilder
@@ -1148,10 +1246,10 @@ struct MiniWaveform: View {
 
                 ForEach(bars.indices, id: \.self) { i in
                     let b = bars[i]
-                    Rectangle()
-                        .fill(color(for: b.kind))
+                    RoundedRectangle(cornerRadius: 1, style: .continuous)
+                        .fill(color(for: b.kind).opacity(b.isImpact ? 1.0 : 0.7))
                         .frame(
-                            width: b.isImpact ? 1.6 : 1,
+                            width: b.isImpact ? 2 : 1.2,
                             height: b.isImpact ? h * 0.95 : h * 0.45
                         )
                         .offset(x: b.x)

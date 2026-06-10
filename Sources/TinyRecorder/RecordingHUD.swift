@@ -249,10 +249,10 @@ private struct LiveWaveform: View {
                     let isImpact =
                         ev.kind == .leftMouseDown || ev.kind == .rightMouseDown ||
                         ev.kind == .keyDown
-                    Rectangle()
-                        .fill(color(for: ev.kind))
+                    RoundedRectangle(cornerRadius: 1, style: .continuous)
+                        .fill(color(for: ev.kind).opacity(isImpact ? 1.0 : 0.7))
                         .frame(
-                            width: isImpact ? 1.6 : 1,
+                            width: isImpact ? 2 : 1.2,
                             height: isImpact ? h : h * 0.45
                         )
                         .offset(x: x)
