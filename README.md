@@ -100,6 +100,15 @@ Configurable in **Preferences → Hotkeys**. Any saved macro can also have its o
 
 The library lives at `~/Library/Application Support/TinyRecorder/library.json`.
 
+## Development
+
+Two interchangeable ways to build:
+
+- **Xcode**: open `TinyRecorder.xcodeproj` (shared `TinyRecorder` scheme, ⌘R to run). Requires Xcode 15+.
+- **CLI**: `./build.sh` — compiles with SwiftPM, assembles `TinyRecorder.app`, stamps the build number from git, and ad-hoc signs.
+
+Both build the same sources in `Sources/TinyRecorder/` against the same `Info.plist`. Note: the app must **not** be sandboxed — `CGEventTap` recording and `CGEvent` posting require it off.
+
 ## Architecture
 
 | File | Responsibility |
