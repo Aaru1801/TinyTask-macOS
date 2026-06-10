@@ -26,10 +26,28 @@ final class AppState: ObservableObject {
     @Published var playHotkey: HotkeyBinding {
         didSet { persist(playHotkey, key: "hk_play") }
     }
-    @Published var lastSavedURL: URL?
     @Published var statusMessage: String = ""
-    @Published var showSettings: Bool = false
     @Published var accessibilityGranted: Bool = AXIsProcessTrusted()
+
+    /// Pre-record countdown seconds. 0 disables.
+    @Published var countdownSeconds: Int {
+        didSet { UserDefaults.standard.set(countdownSeconds, forKey: "countdownSeconds") }
+    }
+    /// Optional sound feedback on record/stop/play.
+    @Published var soundEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(soundEnabled, forKey: "soundEnabled")
+            SoundController.shared.enabled = soundEnabled
+        }
+    }
+    /// Show floating recording HUD when recording.
+    @Published var showRecordingHUD: Bool {
+        didSet { UserDefaults.standard.set(showRecordingHUD, forKey: "showRecordingHUD") }
+    }
+    /// Has the user finished onboarding?
+    @Published var onboardingComplete: Bool {
+        didSet { UserDefaults.standard.set(onboardingComplete, forKey: "onboardingComplete") }
+    }
 
     private var refreshTimer: Timer?
 
@@ -44,12 +62,25 @@ final class AppState: ObservableObject {
         self.playHotkey = AppState.load(key: "hk_play")
             ?? HotkeyBinding(keyCode: KeyCode.f8, name: "F8")
 
+        self.countdownSeconds = d.object(forKey: "countdownSeconds") as? Int ?? 3
+        self.soundEnabled = d.object(forKey: "soundEnabled") as? Bool ?? false
+        self.showRecordingHUD = d.object(forKey: "showRecordingHUD") as? Bool ?? true
+        self.onboardingComplete = d.object(forKey: "onboardingComplete") as? Bool ?? false
+
+        SoundController.shared.enabled = self.soundEnabled
+
+        // Fires on the main run loop, so assign directly — no queue hop needed.
         refreshTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
+            guard let self else { return }
             let trusted = AXIsProcessTrusted()
-            DispatchQueue.main.async {
-                self?.accessibilityGranted = trusted
+            if trusted != self.accessibilityGranted {
+                self.accessibilityGranted = trusted
             }
         }
+    }
+
+    deinit {
+        refreshTimer?.invalidate()
     }
 
     private func persist(_ binding: HotkeyBinding, key: String) {

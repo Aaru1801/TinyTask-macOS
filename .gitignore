@@ -1,0 +1,11 @@
+# Build artifacts
+.build/
+.swiftpm/
+TinyRecorder.app/
+
+# macOS
+.DS_Store
+Icon?
+
+# Editor/session
+*.xcuserstate
