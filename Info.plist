@@ -11,7 +11,7 @@
 	<key>CFBundleVersion</key>
 	<string>1</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.2.0</string>
+	<string>1.4.0</string>
 	<key>CFBundleExecutable</key>
 	<string>TinyRecorder</string>
 	<key>CFBundleIconFile</key>
@@ -24,10 +24,51 @@
 	<string>????</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>13.0</string>
-	<key>LSUIElement</key>
+	<key>LSMultipleInstancesProhibited</key>
 	<true/>
 	<key>NSHighResolutionCapable</key>
 	<true/>
+	<key>NSPrincipalClass</key>
+	<string>NSApplication</string>
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>TinyRecorder Macro</string>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>tinyrec</string>
+			</array>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSHandlerRank</key>
+			<string>Owner</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>com.tinyrecorder.macro</string>
+			</array>
+		</dict>
+	</array>
+	<key>UTExportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeIdentifier</key>
+			<string>com.tinyrecorder.macro</string>
+			<key>UTTypeDescription</key>
+			<string>TinyRecorder Macro</string>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.json</string>
+			</array>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>tinyrec</string>
+				</array>
+			</dict>
+		</dict>
+	</array>
 	<key>NSHumanReadableCopyright</key>
 	<string>TinyRecorder — a free TinyTask clone for macOS.</string>
 	<key>NSAppleEventsUsageDescription</key>

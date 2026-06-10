@@ -7,14 +7,17 @@ import Combine
 final class RecordingHUDController {
     private var window: NSPanel?
     private let recorder: Recorder
-    private let onPause: () -> Void
-    private let onStop:  () -> Void
+    private let onDiscard: () -> Void
+    private let onStop:    () -> Void
     private weak var state: AppState?
 
-    init(recorder: Recorder, state: AppState?, onPause: @escaping () -> Void, onStop: @escaping () -> Void) {
+    init(recorder: Recorder,
+         state: AppState?,
+         onDiscard: @escaping () -> Void,
+         onStop: @escaping () -> Void) {
         self.recorder = recorder
         self.state = state
-        self.onPause = onPause
+        self.onDiscard = onDiscard
         self.onStop = onStop
     }
 
@@ -57,7 +60,7 @@ final class RecordingHUDController {
         let view = RecordingHUDView(
             recorder: recorder,
             state: state,
-            onPause: onPause,
+            onDiscard: onDiscard,
             onStop: onStop
         )
         let host = NSHostingController(rootView: view)
@@ -69,7 +72,12 @@ final class RecordingHUDController {
     }
 
     private func position() {
-        guard let win = window, let screen = NSScreen.main else { return }
+        guard let win = window else { return }
+        // Position on the screen the user is actually working on.
+        let mouse = NSEvent.mouseLocation
+        let screen = NSScreen.screens.first { NSMouseInRect(mouse, $0.frame, false) }
+            ?? NSScreen.main
+        guard let screen else { return }
         let visible = screen.visibleFrame
         let size = win.frame.size
         // Top-right with menu-bar gap.
@@ -84,10 +92,19 @@ final class RecordingHUDController {
 struct RecordingHUDView: View {
     @ObservedObject var recorder: Recorder
     weak var state: AppState?
-    let onPause: () -> Void
+    let onDiscard: () -> Void
     let onStop:  () -> Void
 
     @State private var pulse = false
+
+    /// The actual configured "stop recording" hotkey — pressing record again toggles off.
+    private var stopHotkeyName: String {
+        state?.recordHotkey.name ?? "F6"
+    }
+    /// The "stop everything" hotkey, shown as the discard shortcut affordance.
+    private var emergencyHotkeyName: String {
+        state?.stopHotkey.name ?? "F7"
+    }
 
     private var minutes: String { String(format: "%02d", Int(recorder.liveDuration) / 60) }
     private var seconds: String { String(format: "%02d", Int(recorder.liveDuration) % 60) }
@@ -95,13 +112,19 @@ struct RecordingHUDView: View {
         String(format: "%02d", Int((recorder.liveDuration - floor(recorder.liveDuration)) * 100))
     }
 
-    private var clickCount: Int {
-        recorder.events.filter {
-            $0.kind == .leftMouseDown || $0.kind == .rightMouseDown || $0.kind == .otherMouseDown
-        }.count
+    /// Single pass over the buffer instead of three filters per render.
+    private var stats: (clicks: Int, keys: Int, scrolls: Int) {
+        var clicks = 0, keys = 0, scrolls = 0
+        for ev in recorder.events {
+            switch ev.kind {
+            case .leftMouseDown, .rightMouseDown, .otherMouseDown: clicks += 1
+            case .keyDown: keys += 1
+            case .scrollWheel: scrolls += 1
+            default: break
+            }
+        }
+        return (clicks, keys, scrolls)
     }
-    private var keyCount: Int   { recorder.events.filter { $0.kind == .keyDown }.count }
-    private var scrollCount: Int { recorder.events.filter { $0.kind == .scrollWheel }.count }
 
     var body: some View {
         ZStack {
@@ -161,25 +184,26 @@ struct RecordingHUDView: View {
                     .frame(height: 16)
 
                 // Stat chips
+                let s = stats
                 HStack(spacing: 6) {
-                    HUDStatChip(icon: "cursorarrow.click",  count: clickCount,  tint: .green)
-                    HUDStatChip(icon: "keyboard",           count: keyCount,    tint: .blue)
-                    HUDStatChip(icon: "arrow.up.and.down",  count: scrollCount, tint: .teal)
+                    HUDStatChip(icon: "cursorarrow.click",  count: s.clicks,  tint: .green, label: "clicks")
+                    HUDStatChip(icon: "keyboard",           count: s.keys,    tint: .blue,  label: "keys")
+                    HUDStatChip(icon: "arrow.up.and.down",  count: s.scrolls, tint: .teal,  label: "scrolls")
                 }
 
                 // Buttons
                 HStack(spacing: 6) {
                     HUDButton(
-                        title: "Pause",
-                        icon: "pause.fill",
-                        shortcut: "⌥⌘,",
+                        title: "Discard",
+                        icon: "trash",
+                        shortcut: emergencyHotkeyName,
                         tint: nil,
-                        action: onPause
+                        action: onDiscard
                     )
                     HUDButton(
                         title: "Stop",
                         icon: "stop.fill",
-                        shortcut: "⌥⌘.",
+                        shortcut: stopHotkeyName,
                         tint: .red,
                         action: onStop
                     )
@@ -187,13 +211,17 @@ struct RecordingHUDView: View {
             }
             .padding(14)
         }
-        .frame(width: 300, height: 220)
+        .frame(width: 300)
+        .fixedSize(horizontal: false, vertical: true)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .strokeBorder(Color.primary.opacity(0.10), lineWidth: 0.5)
         )
-        .onAppear { pulse = true }
+        .onAppear { pulse = recorder.isRecording }
+        // Stop the repeat-forever blink when the panel is hidden but retained,
+        // so it isn't animating invisibly in the background.
+        .onChange(of: recorder.isRecording) { recording in pulse = recording }
     }
 }
 
@@ -250,6 +278,7 @@ private struct HUDStatChip: View {
     let icon: String
     let count: Int
     let tint: Color
+    let label: String
 
     var body: some View {
         HStack(spacing: 4) {
@@ -273,6 +302,8 @@ private struct HUDStatChip: View {
                         .strokeBorder(Color.primary.opacity(0.10), lineWidth: 0.5)
                 )
         )
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(count) \(label)")
     }
 }
 

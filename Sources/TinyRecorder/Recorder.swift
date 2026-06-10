@@ -12,15 +12,23 @@ final class Recorder: ObservableObject {
     private var source: CFRunLoopSource?
     private var startTime: CFAbsoluteTime = 0
     private var displayTimer: Timer?
+    /// Captured events accumulate here (on the main run loop, where the tap
+    /// callback fires) and flush into the @Published array at 10 Hz. Per-event
+    /// @Published mutations caused a SwiftUI re-render per input event, which
+    /// could starve the tap into timeout during fast input.
+    private var pending: [RecordedEvent] = []
 
     /// Key codes the recorder must NOT capture (our own hotkeys).
     var ignoredKeyCodes: Set<UInt16> = []
 
     var eventCount: Int { events.count }
 
-    func clear() {
-        events.removeAll()
-        liveDuration = 0
+    deinit {
+        if let tap = tap { CGEvent.tapEnable(tap: tap, enable: false) }
+        if let source = source {
+            CFRunLoopRemoveSource(CFRunLoopGetMain(), source, .commonModes)
+        }
+        displayTimer?.invalidate()
     }
 
     /// Replace the in-memory event list (used when opening a saved macro).
@@ -39,11 +47,15 @@ final class Recorder: ObservableObject {
         liveDuration = events.last?.time ?? 0
     }
 
-    func updateEvent(at index: Int, with new: RecordedEvent) {
-        guard events.indices.contains(index) else { return }
+    /// Returns the event's index after the time-ordered re-sort so callers can
+    /// keep their selection pointing at the edited event.
+    @discardableResult
+    func updateEvent(at index: Int, with new: RecordedEvent) -> Int? {
+        guard events.indices.contains(index) else { return nil }
         events[index] = new
         events.sort { $0.time < $1.time }
         liveDuration = events.last?.time ?? 0
+        return events.firstIndex(of: new)
     }
 
     /// Stretch (>1) or compress (<1) the timestamps of every event.
@@ -87,10 +99,23 @@ final class Recorder: ObservableObject {
         liveDuration = 0
     }
 
+    /// Insert a wait of `milliseconds` at `index` (shifting subsequent events forward in time).
+    /// `index == 0` adds the wait at the very start. `index == events.count` extends the end.
+    func insertWait(at index: Int, milliseconds: Double) {
+        let delta = max(0, milliseconds / 1000.0)
+        guard delta > 0, !events.isEmpty else { return }
+        let clamped = max(0, min(index, events.count))
+        for i in clamped..<events.count {
+            events[i].time += delta
+        }
+        liveDuration = events.last?.time ?? 0
+    }
+
     @discardableResult
     func startRecording() -> Bool {
         guard !isRecording else { return true }
         events.removeAll()
+        pending.removeAll()
         liveDuration = 0
         startTime = CFAbsoluteTimeGetCurrent()
 
@@ -153,8 +178,15 @@ final class Recorder: ObservableObject {
         tap = nil
         source = nil
         stopDisplayTimer()
+        flushPending()
         isRecording = false
         liveDuration = events.last?.time ?? 0
+    }
+
+    private func flushPending() {
+        guard !pending.isEmpty else { return }
+        events.append(contentsOf: pending)
+        pending.removeAll()
     }
 
     private func startDisplayTimer() {
@@ -162,6 +194,7 @@ final class Recorder: ObservableObject {
         displayTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
             guard let self else { return }
             if self.isRecording {
+                self.flushPending()
                 self.liveDuration = CFAbsoluteTimeGetCurrent() - self.startTime
             }
         }
@@ -199,8 +232,14 @@ final class Recorder: ObservableObject {
             scrollDeltaX: Int32(event.getIntegerValueField(.scrollWheelEventDeltaAxis2))
         )
 
-        DispatchQueue.main.async {
-            self.events.append(recorded)
+        // The tap's run-loop source is on the main run loop, so this executes
+        // on the main thread already — append directly. The display timer
+        // flushes into the @Published array at 10 Hz, and stopRecording()
+        // flushes synchronously, so no tail events are ever lost.
+        if Thread.isMainThread {
+            pending.append(recorded)
+        } else {
+            DispatchQueue.main.async { self.pending.append(recorded) }
         }
     }
 }

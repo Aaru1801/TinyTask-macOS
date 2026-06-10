@@ -35,16 +35,6 @@ extension View {
     func cardSurface(cornerRadius: CGFloat = 12) -> some View {
         modifier(CardSurface(cornerRadius: cornerRadius))
     }
-
-    /// Translucent capsule used for chips & pills.
-    func chipSurface() -> some View {
-        modifier(ChipSurface())
-    }
-
-    /// Hover scale + press feedback for tappable elements.
-    func interactive(scale: CGFloat = 1.04, pressedScale: CGFloat = 0.97) -> some View {
-        modifier(InteractiveScale(hoverScale: scale, pressedScale: pressedScale))
-    }
 }
 
 private struct CardSurface: ViewModifier {
@@ -58,40 +48,6 @@ private struct CardSurface: ViewModifier {
                         RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                             .strokeBorder(Color.primary.opacity(0.10), lineWidth: 0.5)
                     )
-            )
-    }
-}
-
-private struct ChipSurface: ViewModifier {
-    func body(content: Content) -> some View {
-        content
-            .background(
-                Capsule(style: .continuous)
-                    .fill(Color.primary.opacity(0.07))
-                    .overlay(
-                        Capsule(style: .continuous)
-                            .strokeBorder(Color.primary.opacity(0.10), lineWidth: 0.5)
-                    )
-            )
-    }
-}
-
-private struct InteractiveScale: ViewModifier {
-    let hoverScale: CGFloat
-    let pressedScale: CGFloat
-    @State private var hovered = false
-    @State private var pressed = false
-
-    func body(content: Content) -> some View {
-        content
-            .scaleEffect(pressed ? pressedScale : (hovered ? hoverScale : 1.0))
-            .animation(.spring(response: 0.28, dampingFraction: 0.7), value: hovered)
-            .animation(.spring(response: 0.18, dampingFraction: 0.6), value: pressed)
-            .onHover { hovered = $0 }
-            .simultaneousGesture(
-                DragGesture(minimumDistance: 0)
-                    .onChanged { _ in pressed = true }
-                    .onEnded   { _ in pressed = false }
             )
     }
 }
@@ -133,36 +89,7 @@ struct KeyCapView: View {
                     )
                     .shadow(color: .black.opacity(0.18), radius: 0, x: 0, y: 1)
             )
-    }
-}
-
-// MARK: - Status dot (animated when active)
-
-struct StatusDot: View {
-    let color: Color
-    var pulsing: Bool
-
-    @State private var pulse = false
-
-    var body: some View {
-        ZStack {
-            // halo
-            if pulsing {
-                Circle()
-                    .fill(color.opacity(0.35))
-                    .frame(width: 14, height: 14)
-                    .scaleEffect(pulse ? 1.6 : 1.0)
-                    .opacity(pulse ? 0 : 0.8)
-                    .animation(.easeOut(duration: 1.0).repeatForever(autoreverses: false), value: pulse)
-            }
-            Circle()
-                .fill(color)
-                .frame(width: 7, height: 7)
-                .shadow(color: color.opacity(0.7), radius: pulsing ? 4 : 0)
-        }
-        .frame(width: 14, height: 14)
-        .onAppear { if pulsing { pulse = true } }
-        .onChange(of: pulsing) { newValue in pulse = newValue }
+            .accessibilityLabel("Shortcut \(text)")
     }
 }
 
@@ -198,18 +125,6 @@ struct BrandMark: View {
                 .frame(width: size * 0.27, height: size * 0.27)
         }
         .frame(width: size, height: size)
-    }
-}
-
-// MARK: - Window-style helpers
-
-extension NSWindow {
-    func applyPolish() {
-        titlebarAppearsTransparent = true
-        styleMask.insert(.fullSizeContentView)
-        isMovableByWindowBackground = false
-        if let frameAutosaveName = self.frameAutosaveName as String?, frameAutosaveName.isEmpty {
-            setFrameAutosaveName("TinyRecorder.MacroEditor")
-        }
+        .accessibilityHidden(true)
     }
 }

@@ -117,6 +117,11 @@ struct EditorView: View {
         }
         .frame(minWidth: 680, minHeight: 460)
         .onChange(of: selection) { _ in loadInspector() }
+        // The active macro changed under us (new recording saved, card clicked,
+        // macro deleted) — stale indices would corrupt the new buffer.
+        .onChange(of: library.currentMacroID) { _ in
+            selection.removeAll()
+        }
         .onDisappear { controller.persistEdits() }
     }
 
@@ -431,6 +436,10 @@ private struct EditorSidebar: View {
     let recorder: Recorder
     let onLoadInspector: () -> Void
 
+    @State private var insertWaitMs: Double = 1000
+    @State private var confirmClearAll = false
+    @Environment(\.undoManager) private var undoManager
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
@@ -459,13 +468,25 @@ private struct EditorSidebar: View {
                     .controlSize(.small)
                     .disabled(selection.count != 1)
 
-                    Button(role: .destructive, action: clearAll) {
+                    Button(role: .destructive) {
+                        confirmClearAll = true
+                    } label: {
                         Label("Clear all", systemImage: "trash.slash")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
                     .disabled(rows.isEmpty)
+                    .confirmationDialog(
+                        "Remove all events from this macro?",
+                        isPresented: $confirmClearAll,
+                        titleVisibility: .visible
+                    ) {
+                        Button("Clear All Events", role: .destructive) { clearAll() }
+                        Button("Cancel", role: .cancel) {}
+                    } message: {
+                        Text("You can undo this with ⌘Z while the editor is open.")
+                    }
                 }
 
                 section("Time stretch", icon: "speedometer") {
@@ -497,6 +518,24 @@ private struct EditorSidebar: View {
                     .buttonStyle(.borderedProminent)
                     .controlSize(.small)
                     .disabled(rows.isEmpty || abs(stretchFactor - 1.0) < 0.001)
+                }
+
+                section("Insert wait", icon: "hourglass") {
+                    Stepper(value: $insertWaitMs, in: 50...60000, step: 100) {
+                        Text("\(Int(insertWaitMs)) ms")
+                            .font(.system(.body, design: .monospaced).weight(.semibold))
+                    }
+                    .controlSize(.small)
+                    Text("Adds a pause at the selected position (or end if none selected).")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.secondary)
+                    Button(action: insertWait) {
+                        Label("Insert wait", systemImage: "hourglass.bottomhalf.filled")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
+                    .disabled(rows.isEmpty)
                 }
 
                 section("Shift selected", icon: "arrow.left.and.right") {
@@ -631,36 +670,75 @@ private struct EditorSidebar: View {
 
     // MARK: - Actions
 
+    /// Snapshots the buffer and registers an undo (redo falls out of
+    /// re-registration inside the undo block) before running a mutation.
+    private func withUndo(_ name: String, _ mutate: () -> Void) {
+        let snapshot = recorder.events
+        undoManager?.registerUndo(withTarget: recorder) { [weak undoManager] rec in
+            let redoSnapshot = rec.events
+            rec.loadEvents(snapshot)
+            undoManager?.registerUndo(withTarget: rec) { rec2 in
+                rec2.loadEvents(redoSnapshot)
+            }
+        }
+        undoManager?.setActionName(name)
+        mutate()
+    }
+
     private func deleteSelected() {
         let idx = IndexSet(selection)
         selection.removeAll()
-        recorder.deleteEvents(at: idx)
+        withUndo("Delete Events") {
+            recorder.deleteEvents(at: idx)
+        }
     }
 
     private func trimBefore() {
         guard selection.count == 1, let id = selection.first else { return }
-        recorder.trimBefore(index: id)
-        selection = [0]
+        withUndo("Trim Before") {
+            recorder.trimBefore(index: id)
+        }
+        selection = recorder.events.isEmpty ? [] : [0]
     }
 
     private func trimAfter() {
         guard selection.count == 1, let id = selection.first else { return }
-        recorder.trimAfter(index: id)
-        selection = [id]
+        withUndo("Trim After") {
+            recorder.trimAfter(index: id)
+        }
+        selection = recorder.events.indices.contains(id) ? [id] : []
     }
 
     private func clearAll() {
         selection.removeAll()
-        recorder.clearAll()
+        withUndo("Clear All Events") {
+            recorder.clearAll()
+        }
+    }
+
+    private func insertWait() {
+        let idx: Int
+        if let s = selection.sorted().first {
+            idx = s
+        } else {
+            idx = recorder.events.count
+        }
+        withUndo("Insert Wait") {
+            recorder.insertWait(at: idx, milliseconds: insertWaitMs)
+        }
     }
 
     private func applyStretch() {
-        recorder.scaleTime(by: stretchFactor)
+        withUndo("Time Stretch") {
+            recorder.scaleTime(by: stretchFactor)
+        }
         stretchFactor = 1.0
     }
 
     private func shiftSelection(by delta: TimeInterval) {
-        recorder.shiftTime(of: IndexSet(selection), by: delta)
+        withUndo("Shift Events") {
+            recorder.shiftTime(of: IndexSet(selection), by: delta)
+        }
     }
 
     private func applyInspector() {
@@ -671,7 +749,13 @@ private struct EditorSidebar: View {
         if let x = Double(inspX) { ev.x = CGFloat(x) }
         if let y = Double(inspY) { ev.y = CGFloat(y) }
         if let k = UInt16(inspKey) { ev.keyCode = k }
-        recorder.updateEvent(at: id, with: ev)
+        var newIndex: Int?
+        withUndo("Edit Event") {
+            newIndex = recorder.updateEvent(at: id, with: ev)
+        }
+        // A time edit re-sorts the buffer — follow the event to its new slot
+        // so the next inspector edit doesn't write to a stranger.
+        if let newIndex { selection = [newIndex] }
         onLoadInspector()
     }
 }

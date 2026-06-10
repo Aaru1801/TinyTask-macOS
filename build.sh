@@ -31,9 +31,15 @@ cp "${ROOT}/Info.plist" "${CONTENTS}/Info.plist"
 cp "${ROOT}/AppIcon.icns" "${CONTENTS}/Resources/AppIcon.icns"
 chmod +x "${CONTENTS}/MacOS/${APP_NAME}"
 
+# Stamp a monotonically-increasing build number (before signing — editing the
+# plist afterwards would invalidate the signature).
+BUILD_NUM=$(git -C "$ROOT" rev-list --count HEAD 2>/dev/null || echo 1)
+/usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUM" "${CONTENTS}/Info.plist"
+
 # Ad-hoc sign so accessibility permissions stick across rebuilds.
+# A signing failure should abort the build loudly, not be swallowed.
 echo "→ Ad-hoc signing..."
-codesign --force --deep --sign - "$APP_BUNDLE" >/dev/null 2>&1 || true
+codesign --force --sign - "$APP_BUNDLE"
 
 echo
 echo "✅ Built: ${APP_BUNDLE}"
