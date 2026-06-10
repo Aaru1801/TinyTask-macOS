@@ -26,6 +26,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         win.titleVisibility = .hidden
         win.toolbarStyle = .unified
         win.backgroundColor = .clear
+        win.isMovableByWindowBackground = true
         win.setFrameAutosaveName("TinyRecorder.MainWindow")
         super.init(window: win)
         win.delegate = self

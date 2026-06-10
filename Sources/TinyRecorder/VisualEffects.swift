@@ -1,6 +1,38 @@
 import SwiftUI
 import AppKit
 
+// MARK: - Brand design tokens
+
+enum Brand {
+    static let redTop    = Color(red: 0.97, green: 0.32, blue: 0.32)
+    static let redBottom = Color(red: 0.78, green: 0.13, blue: 0.13)
+
+    static var redGradient: LinearGradient {
+        LinearGradient(colors: [redTop, redBottom], startPoint: .top, endPoint: .bottom)
+    }
+
+    /// The one spring used for state changes app-wide — consistent motion.
+    static let spring = Animation.spring(response: 0.3, dampingFraction: 0.85)
+}
+
+/// The "tiny Recorder" wordmark from the brand mockups.
+struct Wordmark: View {
+    var size: CGFloat = 13
+    var body: some View {
+        HStack(spacing: 3) {
+            Text("tiny")
+                .font(.system(size: size, weight: .regular, design: .serif))
+                .italic()
+                .foregroundStyle(.secondary)
+            Text("Recorder")
+                .font(.system(size: size, weight: .semibold))
+                .foregroundStyle(.primary)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("TinyRecorder")
+    }
+}
+
 // MARK: - Material backgrounds (NSVisualEffectView)
 
 /// Wraps NSVisualEffectView so SwiftUI views get real macOS vibrancy/translucency.
@@ -102,10 +134,7 @@ struct BrandMark: View {
             RoundedRectangle(cornerRadius: size * 0.235, style: .continuous)
                 .fill(
                     LinearGradient(
-                        colors: [
-                            Color(red: 0.97, green: 0.32, blue: 0.32),
-                            Color(red: 0.78, green: 0.13, blue: 0.13),
-                        ],
+                        colors: [Brand.redTop, Brand.redBottom],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
