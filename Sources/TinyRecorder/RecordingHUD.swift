@@ -63,11 +63,30 @@ final class RecordingHUDController {
             onDiscard: onDiscard,
             onStop: onStop
         )
-        let host = NSHostingController(rootView: view)
-        host.view.wantsLayer = true
-        host.view.layer?.cornerRadius = 16
-        host.view.layer?.masksToBounds = true
-        panel.contentViewController = host
+        let host = NSHostingView(rootView: view)
+
+        // The HUD floats over the live desktop — the one place real Liquid Glass
+        // refraction shines. Host the SwiftUI body INSIDE an NSGlassEffectView so
+        // the glass samples real content behind it (macOS 26+); fall back to the
+        // HUD vibrancy material on earlier systems.
+        if #available(macOS 26.0, *) {
+            let glass = NSGlassEffectView()
+            glass.cornerRadius = 16
+            glass.contentView = host
+            panel.contentView = glass
+        } else {
+            let fx = NSVisualEffectView()
+            fx.material = .hudWindow
+            fx.blendingMode = .behindWindow
+            fx.state = .active
+            fx.wantsLayer = true
+            fx.layer?.cornerRadius = 16
+            fx.layer?.masksToBounds = true
+            host.frame = fx.bounds
+            host.autoresizingMask = [.width, .height]
+            fx.addSubview(host)
+            panel.contentView = fx
+        }
         window = panel
     }
 
@@ -128,8 +147,8 @@ struct RecordingHUDView: View {
 
     var body: some View {
         ZStack {
-            VisualEffectBackground(material: .hudWindow, blendingMode: .behindWindow, isEmphasized: true)
-
+            // No background here — the host NSGlassEffectView (or HUD vibrancy
+            // fallback) provides the surface. A material here would block glass.
             VStack(alignment: .leading, spacing: 10) {
                 // Top row
                 HStack(spacing: 8) {
