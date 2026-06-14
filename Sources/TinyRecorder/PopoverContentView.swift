@@ -428,18 +428,16 @@ private struct FilterChipRow: View {
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            GlassChrome(spacing: 6) {
-                HStack(spacing: 6) {
-                    ForEach(primaryFilters, id: \.self) { item in
-                        chip(item)
-                    }
-                    if !tags.isEmpty {
-                        Rectangle()
-                            .fill(Color.primary.opacity(0.12))
-                            .frame(width: 1, height: 14)
-                        ForEach(tags, id: \.self) { t in
-                            chip(.tag(t))
-                        }
+            HStack(spacing: 6) {
+                ForEach(primaryFilters, id: \.self) { item in
+                    chip(item)
+                }
+                if !tags.isEmpty {
+                    Rectangle()
+                        .fill(Color.primary.opacity(0.12))
+                        .frame(width: 1, height: 14)
+                    ForEach(tags, id: \.self) { t in
+                        chip(.tag(t))
                     }
                 }
             }
@@ -447,6 +445,8 @@ private struct FilterChipRow: View {
         }
     }
 
+    // Filter chips are content-layer controls: plain capsules, with only the
+    // selected one carrying the brand accent (a single emphasis, not glass).
     @ViewBuilder
     private func chip(_ item: LibraryFilter) -> some View {
         let selected = filter == item
@@ -462,10 +462,13 @@ private struct FilterChipRow: View {
             .foregroundStyle(selected ? AnyShapeStyle(.white) : AnyShapeStyle(.secondary))
             .padding(.horizontal, 9)
             .padding(.vertical, 4.5)
-            .liquidGlass(
-                in: Capsule(style: .continuous),
-                tint: selected ? Brand.redTint : nil,
-                interactive: true
+            .background(
+                Capsule(style: .continuous)
+                    .fill(selected ? AnyShapeStyle(Brand.redGradient) : AnyShapeStyle(Color.primary.opacity(0.06)))
+                    .overlay(
+                        Capsule(style: .continuous)
+                            .strokeBorder(selected ? Color.white.opacity(0.18) : Color.primary.opacity(0.10), lineWidth: 0.5)
+                    )
             )
         }
         .buttonStyle(HoverPressButtonStyle(hoverScale: 1.05))
@@ -632,7 +635,14 @@ private struct LibraryHeader: View {
             }
             .padding(.horizontal, 9)
             .padding(.vertical, 6)
-            .liquidGlass(in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .background(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(Color.primary.opacity(0.06))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .strokeBorder(Color.primary.opacity(0.10), lineWidth: 0.5)
+                    )
+            )
 
             Button {
                 controller.toggleRecording()
@@ -841,22 +851,18 @@ private struct MacroCard: View {
             .animation(Brand.spring, value: dragOver)
     }
 
-    /// The card surface: a Liquid Glass tile on macOS 26+, an opaque adaptive
-    /// surface (the original mockup look) on earlier systems.
+    /// The card surface. Cards are the CONTENT layer, so per Apple's Liquid Glass
+    /// guidance they are NOT glass — glass belongs to the floating control layer
+    /// (Record button, HUD, countdown). A card is an opaque adaptive surface;
+    /// selection/current state is a restrained accent fill + the stroke overlay,
+    /// never a heavy colored wash.
     @ViewBuilder
     private var cardBackground: some View {
         let shape = RoundedRectangle(cornerRadius: 12, style: .continuous)
-        if #available(macOS 26.0, *) {
-            let tint = cardAccentColor(for: macro.accent)
-            Color.clear.glassEffect(
-                Brand.glass(tint: isSelected ? tint.opacity(0.5) : (isCurrent ? tint.opacity(0.28) : nil)),
-                in: shape
-            )
-        } else {
-            ZStack {
-                shape.fill(Color(nsColor: .controlBackgroundColor))
-                shape.fill(Color.primary.opacity(isSelected ? 0.07 : (isCurrent ? 0.045 : 0.02)))
-            }
+        let tint = cardAccentColor(for: macro.accent)
+        ZStack {
+            shape.fill(Color(nsColor: .controlBackgroundColor))
+            shape.fill(tint.opacity(isSelected ? 0.10 : (isCurrent ? 0.055 : 0)))
         }
     }
 
@@ -968,12 +974,12 @@ private struct MacroCard: View {
                 .frame(height: 16)
             }
 
-            // Bottom row: meta + actions
+            // Bottom row: meta + actions. These controls live INSIDE a content
+            // card, so they stay plain (no glass) — glass is reserved for the
+            // floating control layer.
             HStack(spacing: 4) {
                 metaRow
                 Spacer()
-                GlassChrome(spacing: 7) {
-                  HStack(spacing: 4) {
                 CardActionButton(systemImage: "play.fill", tint: .green, label: "Play \(macro.name)") { onPlay() }
                     .help("Play")
                 LoopChip(loops: macro.loops, onChange: onSetLoops)
@@ -1006,19 +1012,15 @@ private struct MacroCard: View {
                         .font(.system(size: 9, weight: .bold))
                         .foregroundStyle(.secondary)
                         .frame(width: 22, height: 18)
-                        .liquidGlass(
-                            in: RoundedRectangle(cornerRadius: 5, style: .continuous),
-                            interactive: true,
-                            fallbackFill: Color.primary.opacity(0.05),
-                            fallbackStroke: .clear
+                        .background(
+                            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                .fill(Color.primary.opacity(0.05))
                         )
                 }
                 .menuStyle(.borderlessButton)
                 .menuIndicator(.hidden)
                 .frame(width: 22, height: 18)
                 .accessibilityLabel("More actions")
-                  }
-                }
             }
         }
     }
@@ -1224,11 +1226,9 @@ private struct CardActionButton: View {
                 .font(.system(size: 9, weight: .bold))
                 .foregroundStyle(hovered ? AnyShapeStyle(tint) : AnyShapeStyle(Color.secondary))
                 .frame(width: 22, height: 18)
-                .liquidGlass(
-                    in: RoundedRectangle(cornerRadius: 5, style: .continuous),
-                    interactive: true,
-                    fallbackFill: Color.primary.opacity(hovered ? 0.10 : 0.05),
-                    fallbackStroke: .clear
+                .background(
+                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        .fill(Color.primary.opacity(hovered ? 0.10 : 0.05))
                 )
         }
         .buttonStyle(.plain)
@@ -1407,16 +1407,10 @@ private struct FooterRow: View {
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 6)
-            .background {
-                if hovered {
-                    Color.clear.liquidGlass(
-                        in: RoundedRectangle(cornerRadius: 6, style: .continuous),
-                        interactive: true,
-                        fallbackFill: Color.primary.opacity(0.06),
-                        fallbackStroke: .clear
-                    )
-                }
-            }
+            .background(
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(Color.primary.opacity(hovered ? 0.06 : 0))
+            )
         }
         .buttonStyle(.plain)
         .onHover { hovered = $0 }
@@ -1495,11 +1489,9 @@ struct LoopChip: View {
             .frame(minWidth: 24)
             .padding(.horizontal, 4)
             .padding(.vertical, 3)
-            .liquidGlass(
-                in: RoundedRectangle(cornerRadius: 5, style: .continuous),
-                interactive: true,
-                fallbackFill: Color.primary.opacity(hovered ? 0.10 : 0.05),
-                fallbackStroke: .clear
+            .background(
+                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                    .fill(Color.primary.opacity(hovered ? 0.10 : 0.05))
             )
         }
         .menuStyle(.borderlessButton)

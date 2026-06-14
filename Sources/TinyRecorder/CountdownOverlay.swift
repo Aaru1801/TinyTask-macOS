@@ -91,11 +91,28 @@ final class CountdownOverlayController {
 
         // Built once; the view observes the model so ticks animate properly
         // instead of swapping in a brand-new hosting controller every second.
-        let host = NSHostingController(rootView: CountdownView(model: model))
-        host.view.wantsLayer = true
-        host.view.layer?.cornerRadius = 28
-        host.view.layer?.masksToBounds = true
-        panel.contentViewController = host
+        let host = NSHostingView(rootView: CountdownView(model: model))
+
+        // A Liquid Glass disc floating over the desktop (macOS 26+); a material
+        // circle on earlier systems. cornerRadius 140 = half of 280 → a circle.
+        if #available(macOS 26.0, *) {
+            let glass = NSGlassEffectView()
+            glass.cornerRadius = 140
+            glass.contentView = host
+            panel.contentView = glass
+        } else {
+            let fx = NSVisualEffectView()
+            fx.material = .hudWindow
+            fx.blendingMode = .behindWindow
+            fx.state = .active
+            fx.wantsLayer = true
+            fx.layer?.cornerRadius = 140
+            fx.layer?.masksToBounds = true
+            host.frame = fx.bounds
+            host.autoresizingMask = [.width, .height]
+            fx.addSubview(host)
+            panel.contentView = fx
+        }
         window = panel
     }
 
@@ -135,8 +152,7 @@ private struct CountdownView: View {
 
     var body: some View {
         ZStack {
-            Circle()
-                .fill(.regularMaterial)
+            // The host NSGlassEffectView provides the glass disc; no material here.
             Circle()
                 .strokeBorder(Color.red.opacity(0.55), lineWidth: 3)
                 .scaleEffect(pulse ? 1.04 : 1.0)

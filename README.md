@@ -8,6 +8,12 @@ macOS doesn't ship a built-in macro recorder — TinyRecorder is one. No subscri
 
 Unzip `TinyRecorder.app.zip`, drag into `/Applications`, and launch. The app walks you through permissions on first launch.
 
+## What's in 1.6 — "Liquid Glass"
+
+- 🧊 **Liquid Glass** (macOS 26+) — applied the Apple way: the floating recording HUD and the pre-record countdown are real `NSGlassEffectView` glass that refracts the desktop behind them, and the Record button is tinted prominent glass. The content layer (cards, sidebar, lists) stays opaque per Apple's guidance, so nothing looks muddy. Falls back to standard vibrancy on macOS 13–15.
+- 🎨 **Restrained accent** — selected/current cards use a thin accent border + faint tint instead of a heavy colored fill.
+- 🔁 **TinyTask + text import** — open `.rec` (TinyTask) and `.txt`/`.trm` macros, convert from the command line (see below).
+
 ## What's in 1.3 — "The Library Update"
 
 - 🚀 **Full Dock app** — proper window, top-of-screen menu bar with File / Edit / Macro / Window / Help, real keyboard shortcuts, frame autosaves between launches
@@ -141,12 +147,9 @@ The output format is chosen by the output file's extension (`.tinyrec`/`.json` o
 
 ## Development
 
-Two interchangeable ways to build:
+Build with `./build.sh` — it compiles the SwiftPM package, assembles `TinyRecorder.app`, stamps the build number from git, and ad-hoc signs so Accessibility approval sticks across rebuilds. Sources live in `Sources/TinyRecorder/`.
 
-- **Xcode**: open `TinyRecorder.xcodeproj` (shared `TinyRecorder` scheme, ⌘R to run). Requires Xcode 15+.
-- **CLI**: `./build.sh` — compiles with SwiftPM, assembles `TinyRecorder.app`, stamps the build number from git, and ad-hoc signs.
-
-Both build the same sources in `Sources/TinyRecorder/` against the same `Info.plist`. Note: the app must **not** be sandboxed — `CGEventTap` recording and `CGEvent` posting require it off.
+Requires the macOS 26 SDK (Xcode 26+) to compile the Liquid Glass layer; the app itself still runs back to macOS 13, where it falls back to standard vibrancy. The app must **not** be sandboxed — `CGEventTap` recording and `CGEvent` posting require it off.
 
 ## Architecture
 

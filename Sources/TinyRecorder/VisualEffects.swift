@@ -30,30 +30,10 @@ enum Brand {
 // MARK: - Liquid Glass (macOS 26+) with graceful fallback
 
 extension View {
-    /// Renders a Liquid Glass material behind the view on macOS 26+, clipped to
-    /// `shape`. On earlier systems it falls back to a translucent filled shape so
-    /// the app keeps the same silhouette down to macOS 13.
-    @ViewBuilder
-    func liquidGlass<S: InsettableShape>(
-        in shape: S,
-        tint: Color? = nil,
-        interactive: Bool = false,
-        fallbackFill: Color = Color.primary.opacity(0.06),
-        fallbackStroke: Color = Color.primary.opacity(0.10)
-    ) -> some View {
-        if #available(macOS 26.0, *) {
-            glassEffect(Brand.glass(tint: tint, interactive: interactive), in: shape)
-        } else {
-            background(
-                shape
-                    .fill(tint.map { AnyShapeStyle($0.opacity(0.85)) } ?? AnyShapeStyle(fallbackFill))
-                    .overlay(shape.strokeBorder(fallbackStroke, lineWidth: 0.5))
-            )
-        }
-    }
-
     /// Prominent, tinted capsule control: interactive tinted Liquid Glass on
-    /// macOS 26+, a tinted gradient capsule on earlier systems.
+    /// macOS 26+, a tinted gradient capsule on earlier systems. Reserved for the
+    /// app's primary actions (e.g. the Record button) — glass belongs to the
+    /// floating control layer, used sparingly.
     @ViewBuilder
     func prominentGlassCapsule(tint: Color, gradientFallback: [Color]? = nil) -> some View {
         if #available(macOS 26.0, *) {
@@ -75,20 +55,6 @@ extension View {
     }
 }
 
-/// Wraps content in a `GlassEffectContainer` on macOS 26+ so neighbouring glass
-/// shapes blend and morph together; a passthrough on earlier systems.
-struct GlassChrome<Content: View>: View {
-    var spacing: CGFloat = 8
-    @ViewBuilder var content: () -> Content
-
-    var body: some View {
-        if #available(macOS 26.0, *) {
-            GlassEffectContainer(spacing: spacing) { content() }
-        } else {
-            content()
-        }
-    }
-}
 
 /// The "tiny Recorder" wordmark from the brand mockups.
 struct Wordmark: View {
@@ -187,10 +153,14 @@ struct KeyCapView: View {
             .frame(minWidth: 22)
             .padding(.horizontal, 5)
             .padding(.vertical, 2.5)
-            .liquidGlass(
-                in: RoundedRectangle(cornerRadius: 5, style: .continuous),
-                fallbackFill: Color.primary.opacity(0.08),
-                fallbackStroke: Color.primary.opacity(0.18)
+            .background(
+                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                    .fill(Color.primary.opacity(0.08))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 5, style: .continuous)
+                            .strokeBorder(Color.primary.opacity(0.18), lineWidth: 0.5)
+                    )
+                    .shadow(color: .black.opacity(0.18), radius: 0, x: 0, y: 1)
             )
             .accessibilityLabel("Shortcut \(text)")
     }
