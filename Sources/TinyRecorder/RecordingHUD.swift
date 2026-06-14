@@ -43,8 +43,19 @@ final class RecordingHUDController {
     }
 
     private func create() {
+        let view = RecordingHUDView(
+            recorder: recorder,
+            state: state,
+            onDiscard: onDiscard,
+            onStop: onStop
+        )
+        let host = NSHostingView(rootView: view)
+        let fitting = host.fittingSize
+        let w: CGFloat = fitting.width  > 0 ? fitting.width  : 320
+        let h: CGFloat = fitting.height > 0 ? fitting.height : 240
+
         let panel = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 300, height: 220),
+            contentRect: NSRect(x: 0, y: 0, width: w, height: h),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
@@ -56,14 +67,6 @@ final class RecordingHUDController {
         panel.isOpaque = false
         panel.backgroundColor = .clear
         panel.hasShadow = true
-
-        let view = RecordingHUDView(
-            recorder: recorder,
-            state: state,
-            onDiscard: onDiscard,
-            onStop: onStop
-        )
-        let host = NSHostingView(rootView: view)
 
         // The HUD floats over the live desktop — the one place real Liquid Glass
         // refraction shines. Host the SwiftUI body INSIDE an NSGlassEffectView so
@@ -131,115 +134,107 @@ struct RecordingHUDView: View {
         String(format: "%02d", Int((recorder.liveDuration - floor(recorder.liveDuration)) * 100))
     }
 
-    /// Single pass over the buffer instead of three filters per render.
-    private var stats: (clicks: Int, keys: Int, scrolls: Int) {
-        var clicks = 0, keys = 0, scrolls = 0
+    /// Single pass over the buffer instead of four filters per render.
+    private var stats: (clicks: Int, keys: Int, scrolls: Int, drags: Int) {
+        var clicks = 0, keys = 0, scrolls = 0, drags = 0
         for ev in recorder.events {
             switch ev.kind {
             case .leftMouseDown, .rightMouseDown, .otherMouseDown: clicks += 1
             case .keyDown: keys += 1
             case .scrollWheel: scrolls += 1
+            case .leftMouseDragged, .rightMouseDragged, .otherMouseDragged: drags += 1
             default: break
             }
         }
-        return (clicks, keys, scrolls)
+        return (clicks, keys, scrolls, drags)
+    }
+
+    private var durationLabel: String {
+        String(format: "%.1fs", recorder.liveDuration)
     }
 
     var body: some View {
+        let s = stats
         ZStack {
-            // No background here — the host NSGlassEffectView (or HUD vibrancy
-            // fallback) provides the surface. A material here would block glass.
+            // Inky translucent layer over the host glass: guarantees legible white
+            // content over any desktop, while the NSGlassEffectView behind still
+            // refracts. (This is the design's exact approach.)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(LinearGradient(
+                    colors: [Color(red: 0.10, green: 0.11, blue: 0.14).opacity(0.52),
+                             Color(red: 0.047, green: 0.051, blue: 0.071).opacity(0.52)],
+                    startPoint: .top, endPoint: .bottom))
+
             VStack(alignment: .leading, spacing: 10) {
-                // Top row
-                HStack(spacing: 8) {
-                    Circle()
-                        .fill(.red)
-                        .frame(width: 8, height: 8)
-                        .opacity(pulse ? 0.35 : 1)
-                        .animation(.easeInOut(duration: 0.7).repeatForever(autoreverses: true), value: pulse)
+                // Top row: status + big gradient timer
+                HStack(spacing: 10) {
+                    RecDot(size: 10)
                     Text("RECORDING")
-                        .font(.system(size: 10, weight: .heavy, design: .rounded))
-                        .tracking(1.0)
-                        .foregroundStyle(.red)
+                        .font(.system(size: 11, weight: .semibold))
+                        .tracking(0.6)
+                        .foregroundStyle(Color.white.opacity(0.60))
                     Spacer()
-                    Text("\(recorder.events.count)")
-                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                        .foregroundStyle(.primary)
-                        .contentTransition(.numericText())
-                        .animation(.spring(response: 0.4), value: recorder.events.count)
-                    Text("ev")
-                        .font(.system(size: 9, weight: .medium))
-                        .foregroundStyle(.secondary)
+                    HStack(alignment: .firstTextBaseline, spacing: 0) {
+                        Text("\(minutes):\(seconds)")
+                            .font(.system(size: 22, weight: .semibold, design: .monospaced))
+                            .tracking(-0.5)
+                        Text(".\(hundredths)")
+                            .font(.system(size: 16, weight: .semibold, design: .monospaced))
+                            .opacity(0.55)
+                    }
+                    .foregroundStyle(LinearGradient(
+                        colors: [.white, Color(red: 0.77, green: 0.78, blue: 0.82)],
+                        startPoint: .top, endPoint: .bottom))
+                    .contentTransition(.numericText())
                 }
 
-                // Big timer
-                HStack(alignment: .firstTextBaseline, spacing: 1) {
-                    Text(minutes)
-                        .font(.system(size: 38, weight: .heavy, design: .rounded))
-                        .foregroundStyle(.primary)
-                        .monospacedDigit()
-                    Text(":")
-                        .font(.system(size: 36, weight: .heavy, design: .rounded))
-                        .foregroundStyle(.primary)
-                        .offset(y: -2)
-                    Text(seconds)
-                        .font(.system(size: 38, weight: .heavy, design: .rounded))
-                        .foregroundStyle(.primary)
-                        .monospacedDigit()
-                    Text(".")
-                        .font(.system(size: 30, weight: .heavy, design: .rounded))
-                        .foregroundStyle(.secondary)
-                        .offset(y: 2)
-                    Text(hundredths)
-                        .font(.system(size: 22, weight: .heavy, design: .rounded))
-                        .foregroundStyle(.secondary)
-                        .monospacedDigit()
-                        .baselineOffset(8)
+                // Event-track panel
+                VStack(spacing: 2) {
+                    LiveWaveform(events: recorder.events)
+                        .frame(height: 28)
+                    HStack {
+                        Text("0s")
+                        Spacer()
+                        Text(durationLabel).foregroundStyle(Color.white.opacity(0.55))
+                        Spacer()
+                        Text("30s")
+                    }
+                    .font(.system(size: 9.5, weight: .medium, design: .monospaced))
+                    .foregroundStyle(Color.white.opacity(0.35))
                 }
-                .padding(.top, -2)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(Color.black.opacity(0.30))
+                        .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .strokeBorder(Color.white.opacity(0.05), lineWidth: 0.5)))
 
-                // Mini live waveform
-                LiveWaveform(events: recorder.events)
-                    .frame(height: 16)
-
-                // Stat chips
-                let s = stats
+                // 4-stat grid
                 HStack(spacing: 6) {
-                    HUDStatChip(icon: "cursorarrow.click",  count: s.clicks,  tint: .green, label: "clicks")
-                    HUDStatChip(icon: "keyboard",           count: s.keys,    tint: .blue,  label: "keys")
-                    HUDStatChip(icon: "arrow.up.and.down",  count: s.scrolls, tint: .teal,  label: "scrolls")
+                    HUDStat(icon: "cursorarrow.click", value: s.clicks, label: "Clicks", tint: Brand.sigGreen)
+                    HUDStat(icon: "keyboard",          value: s.keys,   label: "Keys",   tint: Brand.sigBlue)
+                    HUDStat(icon: "arrow.up.and.down", value: s.scrolls, label: "Scroll", tint: Brand.sigTeal)
+                    HUDStat(icon: "hand.draw",         value: s.drags,  label: "Drag",   tint: Brand.sigViolet)
                 }
 
-                // Buttons
+                // Action bar
                 HStack(spacing: 6) {
-                    HUDButton(
-                        title: "Discard",
-                        icon: "trash",
-                        shortcut: emergencyHotkeyName,
-                        tint: nil,
-                        action: onDiscard
-                    )
-                    HUDButton(
-                        title: "Stop",
-                        icon: "stop.fill",
-                        shortcut: stopHotkeyName,
-                        tint: .red,
-                        action: onStop
-                    )
+                    HUDButton(title: "Discard", icon: "trash", shortcut: emergencyHotkeyName, tint: nil, action: onDiscard)
+                    HUDButton(title: "Stop", icon: "stop.fill", shortcut: stopHotkeyName, tint: Brand.red500, action: onStop)
                 }
             }
             .padding(14)
         }
-        .frame(width: 300)
+        .frame(width: 320)
         .fixedSize(horizontal: false, vertical: true)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .strokeBorder(Color.primary.opacity(0.10), lineWidth: 0.5)
+                .strokeBorder(Color.white.opacity(0.14), lineWidth: 0.5)
         )
+        .environment(\.colorScheme, .dark)
         .onAppear { pulse = recorder.isRecording }
-        // Stop the repeat-forever blink when the panel is hidden but retained,
-        // so it isn't animating invisibly in the background.
         .onChange(of: recorder.isRecording) { recording in pulse = recording }
     }
 }
@@ -265,11 +260,9 @@ private struct LiveWaveform: View {
                 ForEach(0..<recent.count, id: \.self) { i in
                     let ev = recent[i]
                     let x = (CGFloat(i) / CGFloat(count)) * w
-                    let isImpact =
-                        ev.kind == .leftMouseDown || ev.kind == .rightMouseDown ||
-                        ev.kind == .keyDown
+                    let isImpact = Brand.isImpact(ev.kind)
                     RoundedRectangle(cornerRadius: 1, style: .continuous)
-                        .fill(color(for: ev.kind).opacity(isImpact ? 1.0 : 0.7))
+                        .fill(Brand.eventColor(ev.kind).opacity(isImpact ? 1.0 : 0.6))
                         .frame(
                             width: isImpact ? 2 : 1.2,
                             height: isImpact ? h : h * 0.45
@@ -279,50 +272,41 @@ private struct LiveWaveform: View {
             }
         }
     }
-
-    private func color(for kind: RecordedEvent.Kind) -> Color {
-        switch kind {
-        case .leftMouseDown, .leftMouseUp:     return .green
-        case .rightMouseDown, .rightMouseUp:   return .orange
-        case .keyDown, .keyUp, .flagsChanged:  return .blue
-        case .leftMouseDragged, .rightMouseDragged, .otherMouseDragged:
-                                               return .purple
-        case .scrollWheel:                     return .teal
-        default:                               return Color.secondary.opacity(0.7)
-        }
-    }
 }
 
-private struct HUDStatChip: View {
+private struct HUDStat: View {
     let icon: String
-    let count: Int
-    let tint: Color
+    let value: Int
     let label: String
+    let tint: Color
 
     var body: some View {
-        HStack(spacing: 4) {
+        VStack(alignment: .leading, spacing: 2) {
             Image(systemName: icon)
-                .font(.system(size: 9, weight: .semibold))
+                .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(tint)
-            Text("\(count)")
-                .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                .foregroundStyle(.primary)
+            Text("\(value)")
+                .font(.system(size: 14, weight: .semibold, design: .monospaced))
+                .foregroundStyle(.white)
+                .tracking(-0.2)
                 .contentTransition(.numericText())
-                .animation(.spring(response: 0.4), value: count)
+                .animation(.spring(response: 0.4), value: value)
+            Text(label.uppercased())
+                .font(.system(size: 9, weight: .medium))
+                .tracking(0.3)
+                .foregroundStyle(Color.white.opacity(0.40))
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .frame(maxWidth: .infinity)
+        .padding(.vertical, 7)
         .background(
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                .fill(Color.primary.opacity(0.06))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .strokeBorder(Color.primary.opacity(0.10), lineWidth: 0.5)
-                )
+            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                .fill(Color.white.opacity(0.04))
+                .overlay(RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    .strokeBorder(Color.white.opacity(0.06), lineWidth: 0.5))
         )
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(count) \(label)")
+        .accessibilityLabel("\(value) \(label)")
     }
 }
 
@@ -337,46 +321,33 @@ private struct HUDButton: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 6) {
+            HStack(spacing: 8) {
                 Image(systemName: icon)
                     .font(.system(size: 10, weight: .bold))
                 Text(title)
-                    .font(.system(size: 11.5, weight: .semibold))
+                    .font(.system(size: 12, weight: .semibold))
+                    .tracking(-0.1)
                 Spacer(minLength: 0)
-                Text(shortcut)
-                    .font(.system(size: 9.5, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(tint != nil ? .white.opacity(0.85) : .secondary)
-                    .padding(.horizontal, 5)
-                    .padding(.vertical, 2)
-                    .background(
-                        RoundedRectangle(cornerRadius: 4, style: .continuous)
-                            .fill((tint != nil ? Color.white : Color.primary).opacity(0.12))
-                    )
+                KeyCapView(text: shortcut, size: .sm, variant: .glass)
             }
-            .foregroundStyle(tint != nil ? AnyShapeStyle(.white) : AnyShapeStyle(.primary))
-            .padding(.horizontal, 10)
-            .padding(.vertical, 7)
+            .foregroundStyle(.white)
+            .padding(.horizontal, 12)
+            .frame(height: 36)
             .frame(maxWidth: .infinity)
             .background(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .fill(
                         tint != nil
-                            ? AnyShapeStyle(LinearGradient(
-                                colors: [tint!.opacity(0.95), tint!.opacity(0.78)],
-                                startPoint: .top, endPoint: .bottom
-                            ))
-                            : AnyShapeStyle(Color.primary.opacity(0.08))
+                            ? AnyShapeStyle(Brand.redGradient)
+                            : AnyShapeStyle(Color.white.opacity(0.08))
                     )
                     .overlay(
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .strokeBorder(
-                                tint != nil ? Color.white.opacity(0.22) : Color.primary.opacity(0.12),
-                                lineWidth: 0.6
-                            )
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .strokeBorder(Color.white.opacity(tint != nil ? 0.22 : 0.10), lineWidth: 0.5)
                     )
                     .shadow(
-                        color: (tint ?? .black).opacity(hovered ? 0.30 : 0.14),
-                        radius: hovered ? 6 : 3, y: 2
+                        color: (tint ?? .black).opacity(hovered ? 0.32 : (tint != nil ? 0.28 : 0.14)),
+                        radius: hovered ? 7 : 4, y: 2
                     )
             )
         }

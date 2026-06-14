@@ -36,6 +36,10 @@ chmod +x "${CONTENTS}/MacOS/${APP_NAME}"
 BUILD_NUM=$(git -C "$ROOT" rev-list --count HEAD 2>/dev/null || echo 1)
 /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUM" "${CONTENTS}/Info.plist"
 
+# Strip extended attributes (Finder info / resource forks accreted from screenshots,
+# launches, etc.) — codesign refuses to sign a bundle that carries them.
+xattr -cr "$APP_BUNDLE"
+
 # Ad-hoc sign so accessibility permissions stick across rebuilds.
 # A signing failure should abort the build loudly, not be swallowed.
 echo "→ Ad-hoc signing..."
