@@ -100,6 +100,45 @@ Configurable in **Preferences → Hotkeys**. Any saved macro can also have its o
 
 The library lives at `~/Library/Application Support/TinyRecorder/library.json`.
 
+## Importing & converting (TinyTask + text)
+
+TinyRecorder reads three macro formats — drag any onto the window, double-click in Finder, use **File → Import**, or the command line:
+
+- **`.tinyrec`** — native (full metadata).
+- **`.rec`** — **TinyTask** macros (the Windows recorder). TinyRecorder decodes TinyTask's `EVENTMSG` records and translates Windows virtual-key codes to macOS keycodes automatically. Mouse moves/clicks and standard keystrokes convert reliably; mouse-wheel and non-US layouts are best-effort. The importer reports how many records it parsed vs. skipped.
+- **`.txt` / `.trm`** — a simple, hand-editable plain-text format ("TRM"). Export any macro to it via the card menu → **Export → As Text…** or **File → Export as Text…** (⇧⌘E), edit it in any editor, and re-import.
+
+### Text macro format (TRM)
+
+One event per line, leading verb, whitespace-separated. `#` comments and blank lines ignored. `@<seconds>` is an absolute timestamp; `WAIT ms` inserts a delay.
+
+```
+TINYRECORDER 1
+# move, click, type a Cmd+Space, scroll
+@0.000  MOVE 640 400
+@0.100  DOWN 640 400 L
+@0.160  UP 640 400 L
+@0.300  FLAGS CMD 0x100000
+@0.310  KEYDOWN SPACE +CMD
+@0.380  KEYUP SPACE +CMD
+@0.390  FLAGS CMD 0x0
+@0.500  KEYDOWN A
+@0.530  KEYUP A
+@0.700  SCROLL -3 0
+```
+
+Verbs: `MOVE x y`, `DRAG x y BTN`, `DOWN/UP x y BTN [clicks=N]` (BTN = `L`/`R`/`M`), `SCROLL dy [dx]`, `KEYDOWN/KEYUP <key> [+MODS]`, `FLAGS <key> <maskhex>`, `WAIT ms`. Keys are symbolic names (`A`, `SPACE`, `F1`, `LEFT`, `CMD`…) or `#<keycode>` for anything unnamed.
+
+### Command-line converter
+
+```bash
+# Convert a TinyTask file to a TinyRecorder macro (or to text):
+TinyRecorder.app/Contents/MacOS/TinyRecorder --convert macro.rec macro.tinyrec
+TinyRecorder.app/Contents/MacOS/TinyRecorder --convert macro.rec macro.txt
+```
+
+The output format is chosen by the output file's extension (`.tinyrec`/`.json` or `.txt`/`.trm`).
+
 ## Development
 
 Two interchangeable ways to build:

@@ -74,6 +74,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menuBar?.exportAsScript()
     }
 
+    @objc func exportText(_ sender: Any?) {
+        menuBar?.exportAsText()
+    }
+
     @objc func playMacro(_ sender: Any?) {
         menuBar?.play()
     }
@@ -160,10 +164,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         fileMenu.addItem(.separator())
         let imp = NSMenuItem(title: "Import Macro…", action: #selector(importMacro(_:)), keyEquivalent: "o")
         imp.target = self
+        imp.toolTip = "Import a TinyRecorder (.tinyrec), TinyTask (.rec), or text (.txt) macro"
         fileMenu.addItem(imp)
         let exp = NSMenuItem(title: "Export as Shell Script…", action: #selector(exportMacro(_:)), keyEquivalent: "e")
         exp.target = self
         fileMenu.addItem(exp)
+        let expText = NSMenuItem(title: "Export as Text…", action: #selector(exportText(_:)), keyEquivalent: "e")
+        expText.keyEquivalentModifierMask = [.command, .shift]
+        expText.target = self
+        fileMenu.addItem(expText)
         fileMenu.addItem(.separator())
         fileMenu.addItem(NSMenuItem(
             title: "Close Window",

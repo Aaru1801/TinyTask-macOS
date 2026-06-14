@@ -13,6 +13,81 @@ enum Brand {
 
     /// The one spring used for state changes app-wide — consistent motion.
     static let spring = Animation.spring(response: 0.3, dampingFraction: 0.85)
+
+    /// A flat tint approximating the brand red, for tinting Liquid Glass.
+    static let redTint = Color(red: 0.88, green: 0.22, blue: 0.22)
+
+    /// Builds a configured Liquid Glass variant. macOS 26+ only.
+    @available(macOS 26.0, *)
+    static func glass(tint: Color? = nil, interactive: Bool = false) -> Glass {
+        var g: Glass = .regular
+        if let tint { g = g.tint(tint) }
+        if interactive { g = g.interactive() }
+        return g
+    }
+}
+
+// MARK: - Liquid Glass (macOS 26+) with graceful fallback
+
+extension View {
+    /// Renders a Liquid Glass material behind the view on macOS 26+, clipped to
+    /// `shape`. On earlier systems it falls back to a translucent filled shape so
+    /// the app keeps the same silhouette down to macOS 13.
+    @ViewBuilder
+    func liquidGlass<S: InsettableShape>(
+        in shape: S,
+        tint: Color? = nil,
+        interactive: Bool = false,
+        fallbackFill: Color = Color.primary.opacity(0.06),
+        fallbackStroke: Color = Color.primary.opacity(0.10)
+    ) -> some View {
+        if #available(macOS 26.0, *) {
+            glassEffect(Brand.glass(tint: tint, interactive: interactive), in: shape)
+        } else {
+            background(
+                shape
+                    .fill(tint.map { AnyShapeStyle($0.opacity(0.85)) } ?? AnyShapeStyle(fallbackFill))
+                    .overlay(shape.strokeBorder(fallbackStroke, lineWidth: 0.5))
+            )
+        }
+    }
+
+    /// Prominent, tinted capsule control: interactive tinted Liquid Glass on
+    /// macOS 26+, a tinted gradient capsule on earlier systems.
+    @ViewBuilder
+    func prominentGlassCapsule(tint: Color, gradientFallback: [Color]? = nil) -> some View {
+        if #available(macOS 26.0, *) {
+            glassEffect(Brand.glass(tint: tint, interactive: true), in: Capsule(style: .continuous))
+        } else {
+            background(
+                Capsule(style: .continuous)
+                    .fill(LinearGradient(
+                        colors: gradientFallback ?? [tint.opacity(0.95), tint.opacity(0.78)],
+                        startPoint: .top, endPoint: .bottom
+                    ))
+                    .overlay(
+                        Capsule(style: .continuous)
+                            .strokeBorder(.white.opacity(0.22), lineWidth: 0.5)
+                    )
+                    .shadow(color: tint.opacity(0.30), radius: 3, x: 0, y: 2)
+            )
+        }
+    }
+}
+
+/// Wraps content in a `GlassEffectContainer` on macOS 26+ so neighbouring glass
+/// shapes blend and morph together; a passthrough on earlier systems.
+struct GlassChrome<Content: View>: View {
+    var spacing: CGFloat = 8
+    @ViewBuilder var content: () -> Content
+
+    var body: some View {
+        if #available(macOS 26.0, *) {
+            GlassEffectContainer(spacing: spacing) { content() }
+        } else {
+            content()
+        }
+    }
 }
 
 /// The "tiny Recorder" wordmark from the brand mockups.
@@ -112,14 +187,10 @@ struct KeyCapView: View {
             .frame(minWidth: 22)
             .padding(.horizontal, 5)
             .padding(.vertical, 2.5)
-            .background(
-                RoundedRectangle(cornerRadius: 5, style: .continuous)
-                    .fill(Color.primary.opacity(0.08))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 5, style: .continuous)
-                            .strokeBorder(Color.primary.opacity(0.18), lineWidth: 0.5)
-                    )
-                    .shadow(color: .black.opacity(0.18), radius: 0, x: 0, y: 1)
+            .liquidGlass(
+                in: RoundedRectangle(cornerRadius: 5, style: .continuous),
+                fallbackFill: Color.primary.opacity(0.08),
+                fallbackStroke: Color.primary.opacity(0.18)
             )
             .accessibilityLabel("Shortcut \(text)")
     }

@@ -542,35 +542,129 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
 
     // MARK: - Save / Open / Export
 
+    /// Import any supported macro file: TinyTask `.rec`, plain-text `.txt`/`.trm`,
+    /// or native `.tinyrec`/`.json`. Dispatches on extension, falling back to a
+    /// content sniff so a mislabeled file still has a chance.
     func importMacro(at url: URL) {
         do {
             let data = try Data(contentsOf: url)
-            // Try v3 SavedMacro JSON first.
-            let dec = JSONDecoder()
-            if let saved = try? dec.decode(SavedMacro.self, from: data) {
-                DispatchQueue.main.async {
-                    var copy = saved
-                    copy.id = UUID()
-                    copy.hotkey = nil
-                    self.library.insert(copy)
-                    self.recorder.loadEvents(copy.events)
-                    self.state.statusMessage = "Imported \(copy.name)."
+            let ext = url.pathExtension.lowercased()
+
+            // Native formats first (preserve full metadata).
+            if ext == "tinyrec" || ext == "json" {
+                let dec = JSONDecoder()
+                if let saved = try? dec.decode(SavedMacro.self, from: data) {
+                    DispatchQueue.main.async {
+                        var copy = saved
+                        copy.id = UUID()
+                        copy.hotkey = nil
+                        self.library.insert(copy)
+                        self.recorder.loadEvents(copy.events)
+                        self.state.statusMessage = "Imported \(copy.name)."
+                    }
+                    return
                 }
-                return
+                if let macro = try? dec.decode(Macro.self, from: data) {
+                    finishImport(events: macro.events, name: url.deletingPathExtension().lastPathComponent, warning: nil)
+                    return
+                }
             }
-            // Fallback: legacy Macro JSON.
-            let macro = try dec.decode(Macro.self, from: data)
-            DispatchQueue.main.async {
-                let imported = self.library.add(
-                    events: macro.events,
-                    name: url.deletingPathExtension().lastPathComponent
-                )
-                self.recorder.loadEvents(imported.events)
-                self.state.statusMessage = "Imported \(imported.name)."
+
+            // External formats by extension.
+            let result: MacroImportResult
+            switch ext {
+            case "rec":
+                result = try TinyTaskImporter.parse(data)
+            case "txt", "trm":
+                guard let text = String(data: data, encoding: .utf8) else {
+                    throw MacroImportError.notTextFormat("file is not UTF-8 text.")
+                }
+                result = try TextMacroFormat.parse(text)
+            default:
+                // Unknown extension — sniff: TinyTask .rec is binary multiple-of-20;
+                // otherwise try text, then JSON.
+                if data.count % 20 == 0, let r = try? TinyTaskImporter.parse(data) {
+                    result = r
+                } else if let text = String(data: data, encoding: .utf8),
+                          let r = try? TextMacroFormat.parse(text) {
+                    result = r
+                } else if let macro = try? JSONDecoder().decode(Macro.self, from: data) {
+                    result = MacroImportResult(events: macro.events, parsed: macro.events.count, skipped: 0, warning: nil)
+                } else {
+                    throw MacroImportError.unreadable("Unrecognized macro file format.")
+                }
             }
+
+            finishImport(events: result.events,
+                         name: url.deletingPathExtension().lastPathComponent,
+                         warning: result.warning ?? (result.skipped > 0 ? result.summary : nil))
         } catch {
             DispatchQueue.main.async {
                 self.state.statusMessage = "Import failed: \(error.localizedDescription)"
+                SoundController.shared.play(.error)
+            }
+        }
+    }
+
+    private func finishImport(events: [RecordedEvent], name: String, warning: String?) {
+        DispatchQueue.main.async {
+            let imported = self.library.add(events: events, name: name)
+            self.recorder.loadEvents(imported.events)
+            if let warning {
+                self.state.statusMessage = "Imported \(imported.name) — \(warning)"
+            } else {
+                self.state.statusMessage = "Imported \(imported.name) · \(events.count) events."
+            }
+        }
+    }
+
+    /// Export the current macro as a hand-editable `.txt` (TRM) file.
+    func exportAsText() {
+        guard !recorder.events.isEmpty else {
+            state.statusMessage = "Nothing to export."
+            return
+        }
+        let panel = NSSavePanel()
+        panel.title = "Export as Text"
+        let baseName = library.currentMacro?.name ?? defaultMacroName()
+        panel.nameFieldStringValue = baseName + ".txt"
+        if let ut = UTType(filenameExtension: "txt") {
+            panel.allowedContentTypes = [ut]
+        }
+        panel.canCreateDirectories = true
+        if popover.isShown { popover.performClose(nil) }
+        NSApp.activate(ignoringOtherApps: true)
+        panel.begin { [weak self] response in
+            guard response == .OK, let url = panel.url, let self else { return }
+            do {
+                let text = TextMacroFormat.export(self.recorder.events)
+                try text.write(to: url, atomically: true, encoding: .utf8)
+                self.state.statusMessage = "Exported \(url.lastPathComponent)."
+            } catch {
+                self.state.statusMessage = "Export failed: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    /// Export a specific macro (by id) as a `.txt` (TRM) file.
+    func exportMacroAsText(_ id: UUID) {
+        guard let macro = library.macros.first(where: { $0.id == id }) else { return }
+        let panel = NSSavePanel()
+        panel.title = "Export \(macro.name) as Text"
+        panel.nameFieldStringValue = macro.name + ".txt"
+        if let ut = UTType(filenameExtension: "txt") {
+            panel.allowedContentTypes = [ut]
+        }
+        panel.canCreateDirectories = true
+        NSApp.activate(ignoringOtherApps: true)
+        panel.begin { [weak self] response in
+            guard response == .OK, let url = panel.url, let self else { return }
+            do {
+                let text = TextMacroFormat.export(macro.events)
+                try text.write(to: url, atomically: true, encoding: .utf8)
+                self.state.statusMessage = "Exported \(url.lastPathComponent)."
+            } catch {
+                self.state.statusMessage = "Export failed: \(error.localizedDescription)"
             }
         }
     }
@@ -578,11 +672,14 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
     func open() {
         let panel = NSOpenPanel()
         panel.title = "Import Macro"
+        panel.message = "Import a TinyRecorder (.tinyrec), TinyTask (.rec), or text (.txt) macro."
         panel.allowsMultipleSelection = true
         panel.canChooseDirectories = false
-        if let ut = UTType(filenameExtension: "tinyrec") {
-            panel.allowedContentTypes = [ut, .json]
-        }
+        let exts = ["tinyrec", "rec", "txt", "trm"]
+        var types = exts.compactMap { UTType(filenameExtension: $0) }
+        types.append(.json)
+        types.append(.plainText)
+        panel.allowedContentTypes = types
         if popover.isShown { popover.performClose(nil) }
         NSApp.activate(ignoringOtherApps: true)
         panel.begin { [weak self] response in

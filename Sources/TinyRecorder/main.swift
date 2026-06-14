@@ -40,6 +40,65 @@ if args.count >= 3, args[1] == "--play" {
     }
 }
 
+// CLI conversion mode: ./TinyRecorder --convert in.rec out.tinyrec
+// Converts TinyTask .rec or text .txt/.trm to .tinyrec (JSON) or .txt (TRM),
+// chosen by the OUTPUT extension. No GUI, exempt from the single-instance guard.
+if args.count >= 4, args[1] == "--convert" {
+    let inURL = URL(fileURLWithPath: args[2])
+    let outURL = URL(fileURLWithPath: args[3])
+    do {
+        let data = try Data(contentsOf: inURL)
+        let inExt = inURL.pathExtension.lowercased()
+        let result: MacroImportResult
+        switch inExt {
+        case "rec":
+            result = try TinyTaskImporter.parse(data)
+        case "txt", "trm":
+            guard let text = String(data: data, encoding: .utf8) else {
+                throw MacroImportError.notTextFormat("input is not UTF-8 text.")
+            }
+            result = try TextMacroFormat.parse(text)
+        case "tinyrec", "json":
+            let dec = JSONDecoder()
+            if let saved = try? dec.decode(SavedMacro.self, from: data) {
+                result = MacroImportResult(events: saved.events, parsed: saved.events.count, skipped: 0, warning: nil)
+            } else {
+                let macro = try dec.decode(Macro.self, from: data)
+                result = MacroImportResult(events: macro.events, parsed: macro.events.count, skipped: 0, warning: nil)
+            }
+        default:
+            // Sniff.
+            if data.count % 20 == 0, let r = try? TinyTaskImporter.parse(data) {
+                result = r
+            } else if let text = String(data: data, encoding: .utf8), let r = try? TextMacroFormat.parse(text) {
+                result = r
+            } else {
+                throw MacroImportError.unreadable("unrecognized input format.")
+            }
+        }
+
+        let outExt = outURL.pathExtension.lowercased()
+        let name = inURL.deletingPathExtension().lastPathComponent
+        if outExt == "txt" || outExt == "trm" {
+            try TextMacroFormat.export(result.events).write(to: outURL, atomically: true, encoding: .utf8)
+        } else {
+            let macro = SavedMacro(name: name, events: result.events)
+            let enc = JSONEncoder()
+            enc.outputFormatting = [.prettyPrinted]
+            try enc.encode(macro).write(to: outURL)
+        }
+
+        var msg = "TinyRecorder: converted \(result.events.count) events -> \(outURL.lastPathComponent)"
+        if result.skipped > 0 { msg += " (\(result.skipped) skipped)" }
+        if let w = result.warning { msg += "\n  warning: \(w)" }
+        FileHandle.standardOutput.write(Data((msg + "\n").utf8))
+        exit(0)
+    } catch {
+        FileHandle.standardError.write(Data("TinyRecorder: conversion failed: \(error.localizedDescription)\n".utf8))
+        exit(1)
+    }
+}
+
 // Single-instance guard: a second copy would double-register Carbon hotkeys,
 // run a second event tap, and clobber library.json last-writer-wins.
 let myPID = ProcessInfo.processInfo.processIdentifier
