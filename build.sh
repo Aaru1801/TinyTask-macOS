@@ -7,10 +7,11 @@
 # than running a copy out of ~/Documents, and it avoids the "every copy needs its
 # own grant" trap.
 #
-# Caveat: we ad-hoc sign (no paid Developer ID), so the bundle has no stable
-# signing identity and TCC falls back to the binary's cdhash. The cdhash changes
-# on every rebuild, so macOS may ask you to re-grant after an update. The only
-# full fix is signing with a stable Developer ID certificate.
+# Signing: if a "Developer ID Application" certificate is installed, this script
+# signs with it (hardened runtime) — a stable identity, so TCC grants persist
+# across rebuilds and the app can be notarized (see notarize.sh). Until then it
+# ad-hoc signs, where TCC falls back to the binary's ever-changing cdhash and may
+# re-prompt for permissions after each rebuild.
 set -euo pipefail
 
 APP_NAME="TinyRecorder"
@@ -57,11 +58,45 @@ cp -R "$STAGE" "$APP_BUNDLE"
 # screenshots, launches) — codesign refuses to sign a bundle that carries them.
 xattr -cr "$APP_BUNDLE"
 
-# Ad-hoc sign the installed bundle (see header note on why this doesn't fully
-# survive rebuilds). A signing failure should abort the build loudly.
-echo "→ Ad-hoc signing..."
-codesign --force --sign - "$APP_BUNDLE"
+# Prefer a Developer ID Application identity when one is installed: a stable
+# signature means TCC (Accessibility / Input Monitoring) grants persist across
+# rebuilds, and it's a prerequisite for notarization. Override by exporting
+# TINYRECORDER_SIGN_ID="Developer ID Application: Name (TEAMID)". Falls back to
+# ad-hoc signing until a Developer ID cert exists (then grants re-prompt per build).
+# List identities once. The trailing `|| true` on each pipeline matters: under
+# `set -euo pipefail` a grep with no match exits non-zero and would abort the
+# build, so we swallow that and just end up with an empty SIGN_ID.
+SIGN_IDS=$(security find-identity -v -p codesigning 2>/dev/null || true)
+SIGN_ID="${TINYRECORDER_SIGN_ID:-}"
+# 1) Prefer a Developer ID Application cert — distribution-ready & notarizable.
+if [ -z "$SIGN_ID" ]; then
+    SIGN_ID=$(printf '%s\n' "$SIGN_IDS" | grep "Developer ID Application" | head -1 | sed -E 's/.*"(.*)"$/\1/' || true)
+fi
+# 2) Otherwise any stable identity (e.g. Apple Development) — not for distribution,
+#    but a stable code signature is enough for TCC grants to persist across rebuilds.
+if [ -z "$SIGN_ID" ]; then
+    SIGN_ID=$(printf '%s\n' "$SIGN_IDS" | grep -E "Apple Development|Apple Distribution" | head -1 | sed -E 's/.*"(.*)"$/\1/' || true)
+fi
+
+if [ -n "$SIGN_ID" ]; then
+    case "$SIGN_ID" in
+        *"Developer ID"*)
+            echo "→ Signing with Developer ID (hardened runtime): ${SIGN_ID}"
+            codesign --force --options runtime --timestamp --sign "$SIGN_ID" "$APP_BUNDLE"
+            ;;
+        *)
+            echo "→ Signing with stable identity (TCC grants persist): ${SIGN_ID}"
+            codesign --force --sign "$SIGN_ID" "$APP_BUNDLE"
+            ;;
+    esac
+    SIGNED_WITH="$SIGN_ID"
+else
+    echo "→ No signing identity found — ad-hoc signing (permissions re-prompt per rebuild)."
+    codesign --force --sign - "$APP_BUNDLE"
+    SIGNED_WITH="ad-hoc"
+fi
 
 echo
 echo "✅ Installed: ${APP_BUNDLE}"
+echo "   Signed:   ${SIGNED_WITH}"
 echo "   Run:  open \"${APP_BUNDLE}\""
