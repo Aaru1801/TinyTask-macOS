@@ -103,8 +103,6 @@ struct EditorView: View {
                         )
                         .padding(14)
 
-                        Divider().opacity(0.5)
-
                         EventTableView(rows: rows, selection: $selection)
                     }
                     .frame(minWidth: 420)
@@ -755,58 +753,167 @@ private struct EditorSidebar: View {
 
 // MARK: - Table
 
+/// Fixed column widths shared by the events header + rows.
+private enum EventCol {
+    static let num: CGFloat = 38
+    static let time: CGFloat = 84
+    static let pos: CGFloat = 132
+    static let key: CGFloat = 80
+}
+
 private struct EventTableView: View {
     let rows: [EventRow]
     @Binding var selection: Set<Int>
+    @State private var lastAnchor: Int?
 
     var body: some View {
-        Table(rows, selection: $selection) {
-            TableColumn("#") { row in
-                Text("\(row.id + 1)")
-                    .font(.system(.body, design: .monospaced))
-                    .foregroundColor(.secondary)
-            }
-            .width(min: 40, ideal: 50, max: 70)
-
-            TableColumn("Time") { row in
-                Text(String(format: "%.3fs", row.event.time))
-                    .font(.system(.body, design: .monospaced))
-            }
-            .width(min: 70, ideal: 80, max: 100)
-
-            TableColumn("Type") { row in
-                Label {
-                    Text(humanKindName(row.event.kind))
-                } icon: {
-                    Image(systemName: kindIcon(row.event.kind))
-                        .foregroundColor(kindColor(row.event.kind))
-                }
-                .labelStyle(.titleAndIcon)
-            }
-            .width(min: 130, ideal: 160)
-
-            TableColumn("Position") { row in
-                if row.event.kind.isMouse {
-                    Text("(\(Int(row.event.x)), \(Int(row.event.y)))")
-                        .font(.system(.body, design: .monospaced))
-                        .foregroundColor(.secondary)
-                } else {
-                    Text("—").foregroundColor(.secondary.opacity(0.5))
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 10) {
+                Text("EVENTS")
+                    .font(.system(size: 10.5, weight: .semibold))
+                    .tracking(0.7)
+                    .foregroundStyle(.secondary)
+                Text("\(rows.count)")
+                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(.tertiary)
+                Spacer()
+                if !selection.isEmpty {
+                    Text("\(selection.count) selected")
+                        .font(.system(size: 10.5, weight: .medium))
+                        .foregroundStyle(Brand.red500)
                 }
             }
-            .width(min: 100, ideal: 110)
 
-            TableColumn("Key") { row in
-                if row.event.kind.isKey {
-                    Text(keyName(row.event.keyCode) ?? "code \(row.event.keyCode)")
-                        .font(.system(.body, design: .monospaced))
-                } else {
-                    Text("—").foregroundColor(.secondary.opacity(0.5))
+            VStack(spacing: 0) {
+                headerRow
+                Divider().opacity(0.5)
+                ScrollView {
+                    LazyVStack(spacing: 0) {
+                        ForEach(rows) { row in
+                            EventRowView(
+                                row: row,
+                                selected: selection.contains(row.id),
+                                onTap: { mods in handleTap(row.id, mods: mods) }
+                            )
+                        }
+                    }
                 }
             }
-            .width(min: 90, ideal: 110)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Color.primary.opacity(0.03))
+                    .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .strokeBorder(Color.primary.opacity(0.08), lineWidth: 0.5))
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
-        .tableStyle(.inset(alternatesRowBackgrounds: true))
+        .padding(.horizontal, 14)
+        .padding(.bottom, 14)
+        .padding(.top, 12)
+    }
+
+    private var headerRow: some View {
+        HStack(spacing: 0) {
+            Text("#").frame(width: EventCol.num, alignment: .leading)
+            Text("TIME").frame(width: EventCol.time, alignment: .leading)
+            Text("TYPE").frame(maxWidth: .infinity, alignment: .leading)
+            Text("POSITION").frame(width: EventCol.pos, alignment: .leading)
+            Text("KEY").frame(width: EventCol.key, alignment: .leading)
+        }
+        .font(.system(size: 9.5, weight: .semibold))
+        .tracking(0.6)
+        .foregroundStyle(.tertiary)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+    }
+
+    private func handleTap(_ id: Int, mods: NSEvent.ModifierFlags) {
+        if mods.contains(.command) {
+            if selection.contains(id) { selection.remove(id) } else { selection.insert(id) }
+            lastAnchor = id
+        } else if mods.contains(.shift), let anchor = lastAnchor ?? selection.first,
+                  let lo = rows.firstIndex(where: { $0.id == min(anchor, id) }),
+                  let hi = rows.firstIndex(where: { $0.id == max(anchor, id) }) {
+            selection.formUnion(rows[lo...hi].map(\.id))
+        } else {
+            selection = [id]
+            lastAnchor = id
+        }
+    }
+}
+
+private struct EventRowView: View {
+    let row: EventRow
+    let selected: Bool
+    let onTap: (NSEvent.ModifierFlags) -> Void
+    @State private var hovered = false
+
+    private var e: RecordedEvent { row.event }
+
+    var body: some View {
+        HStack(spacing: 0) {
+            Text(String(format: "%02d", row.id + 1))
+                .font(.system(size: 11, weight: .regular, design: .monospaced))
+                .foregroundStyle(.tertiary)
+                .frame(width: EventCol.num, alignment: .leading)
+
+            Text(String(format: "%.3fs", e.time))
+                .font(.system(size: 11, design: .monospaced))
+                .foregroundStyle(.secondary)
+                .frame(width: EventCol.time, alignment: .leading)
+
+            HStack(spacing: 8) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        .fill(kindColor(e.kind).opacity(0.14))
+                    Image(systemName: kindIcon(e.kind))
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(kindColor(e.kind))
+                }
+                .frame(width: 20, height: 20)
+                Text(humanKindName(e.kind))
+                    .font(.system(size: 11.5, weight: selected ? .semibold : .regular))
+                    .foregroundStyle(.primary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Group {
+                if e.kind.isMouse {
+                    Text("(\(Int(e.x)), \(Int(e.y)))")
+                } else {
+                    Text("—").foregroundStyle(.quaternary)
+                }
+            }
+            .font(.system(size: 10.5, design: .monospaced))
+            .foregroundStyle(.secondary)
+            .frame(width: EventCol.pos, alignment: .leading)
+
+            Group {
+                if e.kind.isKey {
+                    Text(keyName(e.keyCode) ?? "·\(e.keyCode)")
+                } else {
+                    Text("—").foregroundStyle(.quaternary)
+                }
+            }
+            .font(.system(size: 10.5, design: .monospaced))
+            .foregroundStyle(.secondary)
+            .frame(width: EventCol.key, alignment: .leading)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 7)
+        .background(
+            ZStack(alignment: .leading) {
+                Rectangle().fill(
+                    selected ? Brand.red500.opacity(0.12)
+                             : (hovered ? Color.primary.opacity(0.035) : Color.clear))
+                if selected {
+                    Rectangle().fill(Brand.red500).frame(width: 2)
+                }
+            }
+        )
+        .contentShape(Rectangle())
+        .onHover { hovered = $0 }
+        .onTapGesture { onTap(NSApp.currentEvent?.modifierFlags ?? []) }
     }
 }
 
