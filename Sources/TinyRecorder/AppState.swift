@@ -48,6 +48,11 @@ final class AppState: ObservableObject {
     @Published var onboardingComplete: Bool {
         didSet { UserDefaults.standard.set(onboardingComplete, forKey: "onboardingComplete") }
     }
+    /// When true, the app runs menu-bar-only (no Dock icon, `.accessory`);
+    /// when false it's a full Dock app (`.regular`).
+    @Published var menuBarOnly: Bool {
+        didSet { UserDefaults.standard.set(menuBarOnly, forKey: "menuBarOnly") }
+    }
 
     private var refreshTimer: Timer?
 
@@ -66,6 +71,7 @@ final class AppState: ObservableObject {
         self.soundEnabled = d.object(forKey: "soundEnabled") as? Bool ?? false
         self.showRecordingHUD = d.object(forKey: "showRecordingHUD") as? Bool ?? true
         self.onboardingComplete = d.object(forKey: "onboardingComplete") as? Bool ?? false
+        self.menuBarOnly = d.object(forKey: "menuBarOnly") as? Bool ?? false
 
         SoundController.shared.enabled = self.soundEnabled
 

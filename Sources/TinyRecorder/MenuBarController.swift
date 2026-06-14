@@ -796,6 +796,43 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
         editorWC?.window?.makeKeyAndOrderFront(nil)
     }
 
+    // MARK: - Appearance (Dock vs menu-bar-only)
+
+    /// Apply the persisted appearance mode to the activation policy. Call on launch.
+    func applyAppearanceMode() {
+        NSApp.setActivationPolicy(state.menuBarOnly ? .accessory : .regular)
+    }
+
+    /// Switch between Dock app (`.regular`) and menu-bar-only (`.accessory`) live.
+    func setMenuBarOnly(_ menuBarOnly: Bool) {
+        guard menuBarOnly != state.menuBarOnly else { return }
+        state.menuBarOnly = menuBarOnly
+        NSApp.setActivationPolicy(menuBarOnly ? .accessory : .regular)
+        if menuBarOnly {
+            // No Dock icon now — flash the menu-bar popover so the control surface
+            // is discoverable, then leave the user there.
+            state.statusMessage = "Menu-bar only. Click the menu-bar icon to open TinyRecorder."
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+                self?.showPopoverProgrammatically()
+            }
+        } else {
+            // Dock icon returns — bring the app forward and show the library window.
+            NSApp.activate(ignoringOtherApps: true)
+            showMainWindow()
+        }
+    }
+
+    /// Bring up the menu-bar popover from code (used after switching to menu-bar-only).
+    func showPopoverProgrammatically() {
+        guard !popover.isShown else { return }
+        showPopover()
+    }
+
+    /// Opens the main library window (forwarded from AppDelegate so the controller
+    /// can show it after an appearance switch).
+    var showMainWindowHandler: (() -> Void)?
+    func showMainWindow() { showMainWindowHandler?() }
+
     // MARK: - Settings window
 
     func showSettingsWindow() {
