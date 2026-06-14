@@ -1798,6 +1798,26 @@ struct SettingsPanel: View {
                     ))
                 }
 
+                settingsGroup("General", systemImage: "macwindow") {
+                    HStack {
+                        Text("Show as").font(.system(size: 11.5))
+                        Spacer()
+                        Picker("", selection: Binding(
+                            get: { state.menuBarOnly },
+                            set: { controller.setMenuBarOnly($0) }
+                        )) {
+                            Text("Dock app").tag(false)
+                            Text("Menu bar only").tag(true)
+                        }
+                        .labelsHidden()
+                        .frame(width: 140)
+                    }
+                    Text("Menu bar only hides the Dock icon — open TinyRecorder from the menu-bar icon.")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.tertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
                 settingsGroup("Recording", systemImage: "record.circle") {
                     HStack {
                         Text("Countdown").font(.system(size: 11.5))

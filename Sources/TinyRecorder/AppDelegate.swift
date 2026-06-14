@@ -10,13 +10,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         installMainMenu()
 
         menuBar = MenuBarController()
+        menuBar.showMainWindowHandler = { [weak self] in self?.showMainWindow(nil) }
+        // Honor the saved Dock vs menu-bar-only preference.
+        menuBar.applyAppearanceMode()
 
         // First-launch onboarding takes priority over the main window.
         if !menuBar.state.onboardingComplete {
             menuBar.showWelcomeIfNeeded()
         } else {
             promptForAccessibilityIfNeeded()
-            showMainWindow(nil)
+            // In menu-bar-only mode, launch quietly to the status item — no window.
+            if !menuBar.state.menuBarOnly {
+                showMainWindow(nil)
+            }
         }
     }
 
