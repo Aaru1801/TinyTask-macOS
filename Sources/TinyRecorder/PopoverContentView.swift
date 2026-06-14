@@ -4,23 +4,10 @@ import UniformTypeIdentifiers
 
 // MARK: - Accent color palette
 
-/// Maps a stored accent name (case-insensitive) to a SwiftUI Color.
-/// `nil` and unknown values fall back to the brand red.
+/// Maps a stored accent name to a vibrant signal color (the design palette).
+/// `nil`/unknown fall back to the brand red.
 func cardAccentColor(for accent: String?) -> Color {
-    guard let raw = accent?.lowercased(), !raw.isEmpty else { return .red }
-    switch raw {
-    case "red":    return .red
-    case "orange": return .orange
-    case "yellow": return .yellow
-    case "green":  return .green
-    case "teal":   return .teal
-    case "blue":   return .blue
-    case "indigo": return .indigo
-    case "purple": return .purple
-    case "pink":   return .pink
-    case "gray", "grey": return .gray
-    default:       return .red
-    }
+    Brand.accent(accent)
 }
 
 /// Named accent options shown in the per-macro Color submenu.
@@ -205,7 +192,7 @@ struct PopoverContentView: View {
                 controller: controller,
                 search: $search,
                 isWindow: isWindow,
-                selectionCount: selection.count
+                macroCount: library.macros.count
             )
             .padding(.horizontal, 12)
             .padding(.top, 12)
@@ -606,60 +593,111 @@ private struct LibraryHeader: View {
     let controller: MenuBarController
     @Binding var search: String
     let isWindow: Bool
-    let selectionCount: Int
+    let macroCount: Int
     @EnvironmentObject var recorder: Recorder
     @EnvironmentObject var player: Player
+    @EnvironmentObject var state: AppState
+
+    private var statusText: String {
+        if recorder.isRecording { return "Recording…" }
+        if player.isPlaying     { return "Playing…" }
+        return "Idle · \(macroCount) macro\(macroCount == 1 ? "" : "s")"
+    }
 
     var body: some View {
-        HStack(spacing: 8) {
+        VStack(spacing: 10) {
+            // Brand row (popover only — the window shows the wordmark in its titlebar)
             if !isWindow {
-                BrandMark(size: 30)
+                HStack(spacing: 10) {
+                    BrandMark(size: 26)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Wordmark(size: 13)
+                        HStack(spacing: 5) {
+                            if recorder.isRecording { RecDot(size: 6) }
+                            Text(statusText)
+                                .font(.system(size: 10.5, weight: .medium))
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+                    Spacer(minLength: 0)
+                    Button { controller.showSettingsWindow() } label: {
+                        Image(systemName: "gearshape.fill")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 26, height: 26)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                    .fill(Color.primary.opacity(0.06))
+                                    .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                        .strokeBorder(Color.primary.opacity(0.10), lineWidth: 0.5)))
+                    }
+                    .buttonStyle(HoverPressButtonStyle(hoverScale: 1.06))
+                    .accessibilityLabel("Settings")
+                }
             }
 
-            HStack(spacing: 6) {
+            // Big record button
+            Button {
+                controller.toggleRecording()
+            } label: {
+                HStack(spacing: 10) {
+                    if recorder.isRecording {
+                        Image(systemName: "stop.fill").font(.system(size: 11, weight: .black))
+                    } else {
+                        RecDot(size: 8, glassWhite: true)
+                    }
+                    Text(recorder.isRecording ? "Stop recording" : "Start recording")
+                        .font(.system(size: 13, weight: .semibold))
+                        .tracking(-0.1)
+                    Spacer(minLength: 0)
+                    HStack(spacing: 3) {
+                        KeyCapView(text: state.recordHotkey.name, size: .sm, variant: .glass)
+                    }
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 11)
+                .frame(maxWidth: .infinity)
+                .background(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(Brand.redGradient)
+                        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .strokeBorder(.white.opacity(0.20), lineWidth: 0.5))
+                        .shadow(color: Brand.red500.opacity(0.36), radius: 10, x: 0, y: 5)
+                )
+            }
+            .buttonStyle(HoverPressButtonStyle(hoverScale: 1.012))
+            .accessibilityLabel(recorder.isRecording ? "Stop recording" : "Start recording")
+
+            // Search
+            HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass")
-                    .font(.system(size: 11, weight: .medium))
+                    .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(.secondary)
-                TextField("Search macros…", text: $search)
+                TextField("Search macros", text: $search)
                     .textFieldStyle(.plain)
                     .font(.system(size: 12))
-                if !search.isEmpty {
+                if search.isEmpty {
+                    KeyCapView(text: "⌘", size: .sm)
+                    KeyCapView(text: "K", size: .sm)
+                } else {
                     Button { search = "" } label: {
                         Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 11))
+                            .font(.system(size: 12))
                             .foregroundStyle(.tertiary)
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("Clear search")
                 }
             }
-            .padding(.horizontal, 9)
-            .padding(.vertical, 6)
+            .padding(.horizontal, 10)
+            .frame(height: 32)
             .background(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .fill(Color.primary.opacity(0.06))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .strokeBorder(Color.primary.opacity(0.10), lineWidth: 0.5)
-                    )
+                    .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .strokeBorder(Color.primary.opacity(0.10), lineWidth: 0.5))
             )
-
-            Button {
-                controller.toggleRecording()
-            } label: {
-                HStack(spacing: 5) {
-                    Image(systemName: recorder.isRecording ? "stop.fill" : "circle.fill")
-                        .font(.system(size: recorder.isRecording ? 9 : 8, weight: .black))
-                    Text(recorder.isRecording ? "Stop" : "Record")
-                        .font(.system(size: 11.5, weight: .semibold))
-                }
-                .foregroundStyle(.white)
-                .padding(.horizontal, 11)
-                .padding(.vertical, 6.5)
-                .prominentGlassCapsule(tint: Brand.redTint, gradientFallback: [Brand.redTop, Brand.redBottom])
-            }
-            .buttonStyle(HoverPressButtonStyle(hoverScale: 1.04))
-            .accessibilityLabel(recorder.isRecording ? "Stop recording" : "Start recording")
         }
     }
 }
@@ -1042,33 +1080,20 @@ private struct MacroCard: View {
             Text(durationText)
                 .font(.system(size: 10, weight: .medium, design: .monospaced))
                 .foregroundStyle(.secondary)
-
             if abs(macro.speed - 1.0) > 0.01 {
-                Text("(\(formatSpeed(macro.speed)))")
+                Text(formatSpeed(macro.speed))
                     .font(.system(size: 9.5, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Brand.sigViolet)
             }
-
-            if macro.playCount > 0 {
-                Text("·").foregroundStyle(.tertiary)
-                HStack(spacing: 2) {
-                    Image(systemName: "play.fill").font(.system(size: 7, weight: .black))
-                    Text("\(macro.playCount)").font(.system(size: 9.5, weight: .semibold, design: .monospaced))
-                }
-                .foregroundStyle(.secondary)
-            }
-
-            if let chainName = chainTargetName, macro.chainTo != nil {
-                Text("·").foregroundStyle(.tertiary)
-                HStack(spacing: 2) {
-                    Image(systemName: "arrow.right").font(.system(size: 8, weight: .black))
-                    Text(chainName).font(.system(size: 9.5, weight: .semibold))
-                        .lineLimit(1).truncationMode(.tail)
-                }
-                .foregroundStyle(.secondary)
-                .help("Chains to \(chainName)")
+            if macro.chainTo != nil {
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 8, weight: .black))
+                    .foregroundStyle(.tertiary)
+                    .help(chainTargetName.map { "Chains to \($0)" } ?? "Chained")
             }
         }
+        .lineLimit(1)
+        .fixedSize()
     }
 
     // MARK: - Submenus
@@ -1281,23 +1306,14 @@ struct MiniWaveform: View {
         while i < events.count {
             let ev = events[i]
             let x = CGFloat(ev.time / dur) * width
-            let isImpact = ev.kind == .leftMouseDown || ev.kind == .rightMouseDown ||
-                           ev.kind == .keyDown
-            result.append(Bar(x: x, kind: ev.kind, isImpact: isImpact))
+            result.append(Bar(x: x, kind: ev.kind, isImpact: Brand.isImpact(ev.kind)))
             i += stride
         }
         return result
     }
 
     private func color(for kind: RecordedEvent.Kind) -> Color {
-        switch kind {
-        case .leftMouseDown, .leftMouseUp:    return .green
-        case .rightMouseDown, .rightMouseUp:  return .orange
-        case .keyDown, .keyUp, .flagsChanged: return .blue
-        case .leftMouseDragged, .rightMouseDragged, .otherMouseDragged: return .purple
-        case .scrollWheel:                    return .teal
-        default:                              return Color.secondary.opacity(0.7)
-        }
+        Brand.eventColor(kind)
     }
 }
 

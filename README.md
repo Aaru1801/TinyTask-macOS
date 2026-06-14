@@ -8,6 +8,16 @@ macOS doesn't ship a built-in macro recorder — TinyRecorder is one. No subscri
 
 Unzip `TinyRecorder.app.zip`, drag into `/Applications`, and launch. The app walks you through permissions on first launch.
 
+## What's in 1.7 — "Design system"
+
+Implemented the Claude Design redesign as a shared design system:
+- 🎨 **Signal palette** — events are colored by kind everywhere (key=blue, click=green, scroll=teal, drag=violet, right-click=amber, move=gray), turning every waveform into something you can read at a glance.
+- 🔤 **Refined typography & numerics** — italic-serif "tiny" wordmark, monospaced timestamps/counters, tracked small-caps section labels.
+- ⌨️ **Chiseled keycaps** (with a glass variant on the HUD) and a **pulsing record dot**.
+- 🟥 **Reel-and-smile brand mark** rendered natively.
+- 📋 **Library** — brand row + status, full-width record button with the record-hotkey keycap, ⌘K search, restrained accent on cards.
+- 🎬 **Recording HUD** — inky Liquid Glass over the live desktop: gradient mono timer, event-track panel with time ruler, a 4-stat grid (clicks/keys/scroll/drag), and Discard/Stop with keycap chords.
+
 ## What's in 1.6 — "Liquid Glass"
 
 - 🧊 **Liquid Glass** (macOS 26+) — applied the Apple way: the floating recording HUD and the pre-record countdown are real `NSGlassEffectView` glass that refracts the desktop behind them, and the Record button is tinted prominent glass. The content layer (cards, sidebar, lists) stays opaque per Apple's guidance, so nothing looks muddy. Falls back to standard vibrancy on macOS 13–15.

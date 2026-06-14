@@ -1,21 +1,76 @@
 import SwiftUI
 import AppKit
 
-// MARK: - Brand design tokens
+// MARK: - Brand design tokens (ported from the Claude Design system)
 
 enum Brand {
-    static let redTop    = Color(red: 0.97, green: 0.32, blue: 0.32)
-    static let redBottom = Color(red: 0.78, green: 0.13, blue: 0.13)
+    // Signature red — richer, more confident (rec scale)
+    static let red400 = Color(red: 0.961, green: 0.329, blue: 0.329) // #f55454
+    static let red500 = Color(red: 0.906, green: 0.169, blue: 0.169) // #e72b2b
+    static let red600 = Color(red: 0.800, green: 0.122, blue: 0.122) // #cc1f1f
+    static let red700 = Color(red: 0.678, green: 0.094, blue: 0.094) // #ad1818
 
+    static let redTop    = red400
+    static let redBottom = red600
+
+    /// The signature record-button gradient (#f55454 → #cc1f1f).
     static var redGradient: LinearGradient {
-        LinearGradient(colors: [redTop, redBottom], startPoint: .top, endPoint: .bottom)
+        LinearGradient(colors: [red400, red600], startPoint: .top, endPoint: .bottom)
+    }
+
+    /// A flat tint approximating the brand red, for tinting Liquid Glass.
+    static let redTint = Color(red: 0.88, green: 0.22, blue: 0.22)
+
+    // Signal accents — modern, vibrant but harmonious (oklch → sRGB approximations)
+    static let sigBlue   = Color(red: 0.22, green: 0.48, blue: 0.96)
+    static let sigGreen  = Color(red: 0.16, green: 0.72, blue: 0.45)
+    static let sigAmber  = Color(red: 0.95, green: 0.68, blue: 0.20)
+    static let sigViolet = Color(red: 0.58, green: 0.38, blue: 0.95)
+    static let sigTeal   = Color(red: 0.22, green: 0.72, blue: 0.80)
+    static let sigPink   = Color(red: 0.95, green: 0.36, blue: 0.62)
+
+    /// Named accent (from `SavedMacro.accent`) → a vibrant signal color.
+    static func accent(_ name: String?) -> Color {
+        switch name?.lowercased() {
+        case "red":    return red500
+        case "orange", "amber": return sigAmber
+        case "yellow": return sigAmber
+        case "green":  return sigGreen
+        case "teal":   return sigTeal
+        case "blue":   return sigBlue
+        case "indigo", "violet", "purple": return sigViolet
+        case "pink":   return sigPink
+        case "gray", "grey": return Color(white: 0.55)
+        default:       return red500
+        }
+    }
+
+    /// Event-kind → signal color (the design's waveform legend).
+    static func eventColor(_ kind: RecordedEvent.Kind, dark: Bool = true) -> Color {
+        switch kind {
+        case .leftMouseDown, .leftMouseUp:       return sigGreen          // click
+        case .rightMouseDown, .rightMouseUp:     return sigAmber          // right-click
+        case .otherMouseDown, .otherMouseUp:     return sigAmber
+        case .keyDown, .keyUp, .flagsChanged:    return sigBlue           // key
+        case .leftMouseDragged, .rightMouseDragged, .otherMouseDragged:
+                                                 return sigViolet          // drag
+        case .scrollWheel:                       return sigTeal           // scroll
+        case .mouseMoved:                        return Color.primary.opacity(0.22) // move
+        }
+    }
+
+    /// Whether an event kind is an "impact" (taller tick) vs a move.
+    static func isImpact(_ kind: RecordedEvent.Kind) -> Bool {
+        switch kind {
+        case .mouseMoved, .leftMouseDragged, .rightMouseDragged, .otherMouseDragged:
+            return false
+        default:
+            return true
+        }
     }
 
     /// The one spring used for state changes app-wide — consistent motion.
     static let spring = Animation.spring(response: 0.3, dampingFraction: 0.85)
-
-    /// A flat tint approximating the brand red, for tinting Liquid Glass.
-    static let redTint = Color(red: 0.88, green: 0.22, blue: 0.22)
 
     /// Builds a configured Liquid Glass variant. macOS 26+ only.
     @available(macOS 26.0, *)
@@ -55,19 +110,21 @@ extension View {
     }
 }
 
+// MARK: - Wordmark
 
-/// The "tiny Recorder" wordmark from the brand mockups.
+/// The "tiny Recorder" wordmark — italic serif "tiny" + semibold "Recorder".
 struct Wordmark: View {
     var size: CGFloat = 13
     var body: some View {
-        HStack(spacing: 3) {
+        HStack(alignment: .firstTextBaseline, spacing: size * 0.04) {
             Text("tiny")
-                .font(.system(size: size, weight: .regular, design: .serif))
+                .font(.system(size: size * 1.25, weight: .regular, design: .serif))
                 .italic()
                 .foregroundStyle(.secondary)
             Text("Recorder")
                 .font(.system(size: size, weight: .semibold))
                 .foregroundStyle(.primary)
+                .tracking(-0.3)
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("TinyRecorder")
@@ -142,59 +199,169 @@ struct HoverPressButtonStyle: ButtonStyle {
     }
 }
 
-// MARK: - Key-cap chip (used for hotkey display)
+// MARK: - Key-cap chip (chiseled, multi-size, glass variant)
 
 struct KeyCapView: View {
+    enum Size { case sm, md, lg }
+    enum Variant { case standard, glass }
+
     let text: String
+    var size: Size = .md
+    var variant: Variant = .standard
+    @Environment(\.colorScheme) private var scheme
+
+    private var height: CGFloat { size == .sm ? 18 : (size == .lg ? 28 : 22) }
+    private var minW: CGFloat   { size == .sm ? 18 : (size == .lg ? 30 : 22) }
+    private var font: CGFloat   { size == .sm ? 10 : (size == .lg ? 13 : 11) }
+    private var radius: CGFloat { size == .sm ? 4 : 6 }
+
     var body: some View {
         Text(text)
-            .font(.system(size: 10.5, weight: .semibold, design: .rounded))
-            .foregroundColor(.primary)
-            .frame(minWidth: 22)
-            .padding(.horizontal, 5)
-            .padding(.vertical, 2.5)
-            .background(
-                RoundedRectangle(cornerRadius: 5, style: .continuous)
-                    .fill(Color.primary.opacity(0.08))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 5, style: .continuous)
-                            .strokeBorder(Color.primary.opacity(0.18), lineWidth: 0.5)
-                    )
-                    .shadow(color: .black.opacity(0.18), radius: 0, x: 0, y: 1)
-            )
+            .font(.system(size: font, weight: .semibold, design: .monospaced))
+            .foregroundStyle(variant == .glass ? AnyShapeStyle(.white) : AnyShapeStyle(.primary))
+            .frame(minWidth: minW, minHeight: height)
+            .padding(.horizontal, size == .lg ? 8 : (size == .sm ? 5 : 6))
+            .background(background)
             .accessibilityLabel("Shortcut \(text)")
+    }
+
+    @ViewBuilder
+    private var background: some View {
+        let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
+        if variant == .glass {
+            shape.fill(Color.white.opacity(0.16))
+                .overlay(shape.strokeBorder(Color.white.opacity(0.24), lineWidth: 0.5))
+                .overlay(shape.fill(LinearGradient(
+                    colors: [Color.white.opacity(0.20), .clear],
+                    startPoint: .top, endPoint: .center)))
+        } else {
+            let isDark = scheme == .dark
+            shape
+                .fill(LinearGradient(
+                    colors: isDark
+                        ? [Color(red: 0.165, green: 0.176, blue: 0.212), Color(red: 0.122, green: 0.133, blue: 0.161)]
+                        : [.white, Color(red: 0.933, green: 0.941, blue: 0.957)],
+                    startPoint: .top, endPoint: .bottom))
+                .overlay(shape.strokeBorder(
+                    isDark ? Color.white.opacity(0.14) : Color.black.opacity(0.20), lineWidth: 0.5))
+                .overlay(   // top inner highlight
+                    shape.fill(LinearGradient(
+                        colors: [Color.white.opacity(isDark ? 0.10 : 0.80), .clear],
+                        startPoint: .top, endPoint: .center)).blendMode(.plusLighter).opacity(0.6))
+                .shadow(color: .black.opacity(isDark ? 0.40 : 0.10), radius: 0, x: 0, y: 1)
+        }
     }
 }
 
-// MARK: - Brand mark (used in header)
+// MARK: - Pulsing record dot
+
+struct RecDot: View {
+    var size: CGFloat = 8
+    var color: Color = Brand.red500
+    var glassWhite: Bool = false
+    @State private var pulse = false
+
+    var body: some View {
+        let c = glassWhite ? Color.white : color
+        ZStack {
+            Circle()
+                .stroke(c.opacity(0.55), lineWidth: 1.5)
+                .scaleEffect(pulse ? 2.2 : 1.0)
+                .opacity(pulse ? 0 : 0.8)
+            Circle()
+                .fill(c)
+                .shadow(color: c.opacity(0.6), radius: size * 0.6)
+        }
+        .frame(width: size, height: size)
+        .onAppear {
+            withAnimation(.easeOut(duration: 1.6).repeatForever(autoreverses: false)) { pulse = true }
+        }
+        .accessibilityHidden(true)
+    }
+}
+
+// MARK: - Brand mark (reel-and-smile tape face from the design)
 
 struct BrandMark: View {
     var size: CGFloat = 30
-    var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: size * 0.235, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [Brand.redTop, Brand.redBottom],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: size * 0.235, style: .continuous)
-                        .strokeBorder(.white.opacity(0.18), lineWidth: 0.5)
-                )
-                .shadow(color: .red.opacity(0.35), radius: 4, x: 0, y: 2)
+    @Environment(\.colorScheme) private var scheme
 
-            // Inner record glyph
+    var body: some View {
+        let dark = scheme == .dark
+        let s = size
+        let corner = s * 0.23
+        ZStack {
+            // Body
+            RoundedRectangle(cornerRadius: corner, style: .continuous)
+                .fill(LinearGradient(
+                    colors: dark
+                        ? [Color(red: 0.137, green: 0.145, blue: 0.18), Color(red: 0.051, green: 0.055, blue: 0.071)]
+                        : [.white, Color(red: 0.894, green: 0.902, blue: 0.925)],
+                    startPoint: .top, endPoint: .bottom))
+                .overlay(  // top-left sheen
+                    RoundedRectangle(cornerRadius: corner, style: .continuous)
+                        .fill(RadialGradient(
+                            colors: [Color.white.opacity(dark ? 0.10 : 0.55), .clear],
+                            center: .init(x: 0.3, y: 0.2), startRadius: 0, endRadius: s * 0.7)))
+                .overlay(
+                    RoundedRectangle(cornerRadius: corner, style: .continuous)
+                        .strokeBorder(dark ? Color.white.opacity(0.08) : Color.black.opacity(0.06), lineWidth: 0.8))
+                .shadow(color: .black.opacity(dark ? 0.5 : 0.18), radius: s * 0.10, x: 0, y: s * 0.04)
+
+            // Smile
+            SmileShape()
+                .stroke(dark ? Color(red: 0.953, green: 0.957, blue: 0.969) : Color(red: 0.078, green: 0.086, blue: 0.110),
+                        style: StrokeStyle(lineWidth: s * 0.025, lineCap: .round))
+                .frame(width: s, height: s)
+
+            // Reels
+            reel(cx: 0.31, cy: 0.44, dark: dark)
+            reel(cx: 0.69, cy: 0.44, dark: dark)
+
+            // Rec dot (top-right)
             Circle()
-                .strokeBorder(.white, lineWidth: size * 0.06)
-                .frame(width: size * 0.5, height: size * 0.5)
-            Circle()
-                .fill(.white)
-                .frame(width: size * 0.27, height: size * 0.27)
+                .fill(Brand.red500)
+                .overlay(Circle().strokeBorder(Color.white.opacity(0.40), lineWidth: 0.8))
+                .frame(width: s * 0.06, height: s * 0.06)
+                .position(x: s * 0.83, y: s * 0.21)
         }
-        .frame(width: size, height: size)
+        .frame(width: s, height: s)
         .accessibilityHidden(true)
+    }
+
+    @ViewBuilder
+    private func reel(cx: CGFloat, cy: CGFloat, dark: Bool) -> some View {
+        let s = size
+        let r = s * 0.165
+        ZStack {
+            Circle()
+                .fill(LinearGradient(
+                    colors: [Color(red: 0.165, green: 0.176, blue: 0.212), Color(red: 0.039, green: 0.043, blue: 0.055)],
+                    startPoint: .top, endPoint: .bottom))
+                .overlay(Circle().strokeBorder(dark ? Color.white.opacity(0.10) : Color.black.opacity(0.30), lineWidth: 0.6))
+                .frame(width: r * 2, height: r * 2)
+            Circle()
+                .fill(RadialGradient(
+                    colors: [Brand.red400, Brand.red600],
+                    center: .init(x: 0.4, y: 0.35), startRadius: 0, endRadius: s * 0.05))
+                .frame(width: s * 0.09, height: s * 0.09)
+            Circle()
+                .fill(Color.white.opacity(0.55))
+                .frame(width: s * 0.025, height: s * 0.025)
+                .offset(x: -s * 0.0075, y: -s * 0.0075)
+        }
+        .position(x: s * cx, y: s * cy)
+    }
+}
+
+/// The downward-curve "smile" from the brand mark (200×200 coordinate space).
+private struct SmileShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        let w = rect.width, h = rect.height
+        var p = Path()
+        p.move(to: CGPoint(x: 0.26 * w, y: 0.56 * h))
+        p.addQuadCurve(to: CGPoint(x: 0.74 * w, y: 0.56 * h),
+                       control: CGPoint(x: 0.5 * w, y: 0.78 * h))
+        return p
     }
 }

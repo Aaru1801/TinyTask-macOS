@@ -237,11 +237,10 @@ private struct EditorTimeline: View {
                     .tracking(0.7)
                     .foregroundStyle(.secondary)
                 Spacer()
-                LegendChip(label: "Click",  tint: .green)
-                LegendChip(label: "Key",    tint: .blue)
-                LegendChip(label: "Drag",   tint: .purple)
-                LegendChip(label: "Scroll", tint: .teal)
-                LegendChip(label: "Move",   tint: .secondary)
+                LegendChip(label: "Key",    tint: Brand.sigBlue)
+                LegendChip(label: "Click",  tint: Brand.sigGreen)
+                LegendChip(label: "Scroll", tint: Brand.sigTeal)
+                LegendChip(label: "Drag",   tint: Brand.sigViolet)
             }
 
             GeometryReader { geo in
@@ -300,7 +299,7 @@ private struct EditorTimeline: View {
                     // Playhead
                     if let p = playProgress {
                         Rectangle()
-                            .fill(Color.green)
+                            .fill(Brand.red500)
                             .frame(width: 2, height: h)
                             .offset(x: CGFloat(p) * w)
                     }
@@ -399,14 +398,7 @@ private struct EditorTimeline: View {
     }
 
     private func eventColor(for kind: RecordedEvent.Kind) -> Color {
-        switch kind {
-        case .leftMouseDown, .leftMouseUp:    return .green
-        case .rightMouseDown, .rightMouseUp:  return .orange
-        case .keyDown, .keyUp, .flagsChanged: return .blue
-        case .leftMouseDragged, .rightMouseDragged, .otherMouseDragged: return .purple
-        case .scrollWheel:                    return .teal
-        default:                              return Color.secondary.opacity(0.7)
-        }
+        Brand.eventColor(kind)
     }
 }
 
@@ -895,16 +887,7 @@ func kindIcon(_ k: RecordedEvent.Kind) -> String {
 }
 
 func kindColor(_ k: RecordedEvent.Kind) -> Color {
-    if k.isKey { return .blue }
-    switch k {
-    case .leftMouseDown, .leftMouseUp:    return .green
-    case .rightMouseDown, .rightMouseUp:  return .orange
-    case .mouseMoved:                     return .gray
-    case .leftMouseDragged, .rightMouseDragged, .otherMouseDragged:
-        return .purple
-    case .scrollWheel:                    return .teal
-    default:                              return .secondary
-    }
+    Brand.eventColor(k)
 }
 
 /// Human-readable name for a small set of common Mac keycodes.
