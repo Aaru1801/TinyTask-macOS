@@ -97,7 +97,7 @@ struct PopoverContentView: View {
                         Text("Drop to import")
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundStyle(.primary)
-                        Text("Releases a .tinyrec file into the library.")
+                        Text("Drop a .tinyrec, TinyTask .rec, or .txt macro.")
                             .font(.system(size: 10.5))
                             .foregroundStyle(.secondary)
                     }
@@ -170,13 +170,16 @@ struct PopoverContentView: View {
         }
     }
 
-    /// Returns `true` if any provider was a `.tinyrec` URL we accepted.
+    /// Importable macro file extensions accepted via drag-and-drop.
+    private static let importableExts: Set<String> = ["tinyrec", "rec", "txt", "trm", "json"]
+
+    /// Returns `true` if any provider was a macro file URL we accepted.
     private func handleFileDrop(providers: [NSItemProvider]) -> Bool {
         var accepted = false
         for provider in providers where provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) {
             accepted = true
             _ = provider.loadObject(ofClass: URL.self) { url, _ in
-                guard let url = url, url.pathExtension.lowercased() == "tinyrec" else { return }
+                guard let url, Self.importableExts.contains(url.pathExtension.lowercased()) else { return }
                 DispatchQueue.main.async {
                     controller.importMacro(at: url)
                 }
@@ -302,6 +305,9 @@ struct PopoverContentView: View {
                                 onExport: {
                                     controller.exportMacroToFile(macro.id)
                                 },
+                                onExportText: {
+                                    controller.exportMacroAsText(macro.id)
+                                },
                                 onStartRename: {
                                     renamingID = macro.id
                                     renameText = macro.name
@@ -422,16 +428,18 @@ private struct FilterChipRow: View {
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 6) {
-                ForEach(primaryFilters, id: \.self) { item in
-                    chip(item)
-                }
-                if !tags.isEmpty {
-                    Rectangle()
-                        .fill(Color.primary.opacity(0.12))
-                        .frame(width: 1, height: 14)
-                    ForEach(tags, id: \.self) { t in
-                        chip(.tag(t))
+            GlassChrome(spacing: 6) {
+                HStack(spacing: 6) {
+                    ForEach(primaryFilters, id: \.self) { item in
+                        chip(item)
+                    }
+                    if !tags.isEmpty {
+                        Rectangle()
+                            .fill(Color.primary.opacity(0.12))
+                            .frame(width: 1, height: 14)
+                        ForEach(tags, id: \.self) { t in
+                            chip(.tag(t))
+                        }
                     }
                 }
             }
@@ -454,16 +462,10 @@ private struct FilterChipRow: View {
             .foregroundStyle(selected ? AnyShapeStyle(.white) : AnyShapeStyle(.secondary))
             .padding(.horizontal, 9)
             .padding(.vertical, 4.5)
-            .background(
-                Capsule(style: .continuous)
-                    .fill(selected ? AnyShapeStyle(Brand.redGradient) : AnyShapeStyle(Color.primary.opacity(0.06)))
-                    .overlay(
-                        Capsule(style: .continuous)
-                            .strokeBorder(
-                                selected ? Color.white.opacity(0.20) : Color.primary.opacity(0.10),
-                                lineWidth: 0.5
-                            )
-                    )
+            .liquidGlass(
+                in: Capsule(style: .continuous),
+                tint: selected ? Brand.redTint : nil,
+                interactive: true
             )
         }
         .buttonStyle(HoverPressButtonStyle(hoverScale: 1.05))
@@ -630,14 +632,7 @@ private struct LibraryHeader: View {
             }
             .padding(.horizontal, 9)
             .padding(.vertical, 6)
-            .background(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(Color.primary.opacity(0.06))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .strokeBorder(Color.primary.opacity(0.10), lineWidth: 0.5)
-                    )
-            )
+            .liquidGlass(in: RoundedRectangle(cornerRadius: 8, style: .continuous))
 
             Button {
                 controller.toggleRecording()
@@ -651,15 +646,7 @@ private struct LibraryHeader: View {
                 .foregroundStyle(.white)
                 .padding(.horizontal, 11)
                 .padding(.vertical, 6.5)
-                .background(
-                    Capsule(style: .continuous)
-                        .fill(Brand.redGradient)
-                        .overlay(
-                            Capsule(style: .continuous)
-                                .strokeBorder(.white.opacity(0.22), lineWidth: 0.5)
-                        )
-                        .shadow(color: .red.opacity(0.35), radius: 4, x: 0, y: 2)
-                )
+                .prominentGlassCapsule(tint: Brand.redTint, gradientFallback: [Brand.redTop, Brand.redBottom])
             }
             .buttonStyle(HoverPressButtonStyle(hoverScale: 1.04))
             .accessibilityLabel(recorder.isRecording ? "Stop recording" : "Start recording")
@@ -746,6 +733,7 @@ private struct MacroCard: View {
     let onDelete: () -> Void
     let onDuplicate: () -> Void
     let onExport: () -> Void
+    let onExportText: () -> Void
     let onStartRename: () -> Void
     let onCommitRename: () -> Void
     let onSetLoops: (Int) -> Void
@@ -836,30 +824,40 @@ private struct MacroCard: View {
         cardContent
             .padding(11)
             .frame(height: macro.tags.isEmpty ? 102 : 124)
-            .background(
-                ZStack {
-                    // Opaque adaptive surface: white card in light mode,
-                    // elevated gray in dark — the mockup look.
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(Color(nsColor: .controlBackgroundColor))
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(Color.primary.opacity(isSelected ? 0.07 : (isCurrent ? 0.045 : 0.02)))
-                }
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .strokeBorder(strokeColor, lineWidth: isSelected ? 1.4 : (isCurrent ? 1.0 : 0.5))
-                )
-                .shadow(
-                    color: .black.opacity(hovered ? 0.16 : 0.07),
-                    radius: hovered ? 7 : 3,
-                    y: hovered ? 3 : 1.5
-                )
+            .background { cardBackground }
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .strokeBorder(strokeColor, lineWidth: isSelected ? 1.4 : (isCurrent ? 1.0 : 0.5))
+            )
+            .shadow(
+                color: .black.opacity(hovered ? 0.16 : 0.07),
+                radius: hovered ? 7 : 3,
+                y: hovered ? 3 : 1.5
             )
             .scaleEffect(hovered ? 1.012 : 1.0)
             .animation(.spring(response: 0.25, dampingFraction: 0.85), value: hovered)
             .animation(Brand.spring, value: isCurrent)
             .animation(Brand.spring, value: isSelected)
             .animation(Brand.spring, value: dragOver)
+    }
+
+    /// The card surface: a Liquid Glass tile on macOS 26+, an opaque adaptive
+    /// surface (the original mockup look) on earlier systems.
+    @ViewBuilder
+    private var cardBackground: some View {
+        let shape = RoundedRectangle(cornerRadius: 12, style: .continuous)
+        if #available(macOS 26.0, *) {
+            let tint = cardAccentColor(for: macro.accent)
+            Color.clear.glassEffect(
+                Brand.glass(tint: isSelected ? tint.opacity(0.5) : (isCurrent ? tint.opacity(0.28) : nil)),
+                in: shape
+            )
+        } else {
+            ZStack {
+                shape.fill(Color(nsColor: .controlBackgroundColor))
+                shape.fill(Color.primary.opacity(isSelected ? 0.07 : (isCurrent ? 0.045 : 0.02)))
+            }
+        }
     }
 
     @ViewBuilder
@@ -882,7 +880,10 @@ private struct MacroCard: View {
         chainSubmenu()
         Divider()
         Button("Duplicate") { onDuplicate() }
-        Button("Export…") { onExport() }
+        Menu("Export") {
+            Button("As TinyRecorder File…") { onExport() }
+            Button("As Text…") { onExportText() }
+        }
         Divider()
         Button("Delete", role: .destructive) { onDelete() }
     }
@@ -971,6 +972,8 @@ private struct MacroCard: View {
             HStack(spacing: 4) {
                 metaRow
                 Spacer()
+                GlassChrome(spacing: 7) {
+                  HStack(spacing: 4) {
                 CardActionButton(systemImage: "play.fill", tint: .green, label: "Play \(macro.name)") { onPlay() }
                     .help("Play")
                 LoopChip(loops: macro.loops, onChange: onSetLoops)
@@ -992,7 +995,10 @@ private struct MacroCard: View {
                     chainSubmenu()
                     Divider()
                     Button("Duplicate") { onDuplicate() }
-                    Button("Export…") { onExport() }
+                    Menu("Export") {
+                        Button("As TinyRecorder File…") { onExport() }
+                        Button("As Text…") { onExportText() }
+                    }
                     Divider()
                     Button("Delete", role: .destructive, action: onDelete)
                 } label: {
@@ -1000,15 +1006,19 @@ private struct MacroCard: View {
                         .font(.system(size: 9, weight: .bold))
                         .foregroundStyle(.secondary)
                         .frame(width: 22, height: 18)
-                        .background(
-                            RoundedRectangle(cornerRadius: 5, style: .continuous)
-                                .fill(Color.primary.opacity(0.05))
+                        .liquidGlass(
+                            in: RoundedRectangle(cornerRadius: 5, style: .continuous),
+                            interactive: true,
+                            fallbackFill: Color.primary.opacity(0.05),
+                            fallbackStroke: .clear
                         )
                 }
                 .menuStyle(.borderlessButton)
                 .menuIndicator(.hidden)
                 .frame(width: 22, height: 18)
                 .accessibilityLabel("More actions")
+                  }
+                }
             }
         }
     }
@@ -1214,9 +1224,11 @@ private struct CardActionButton: View {
                 .font(.system(size: 9, weight: .bold))
                 .foregroundStyle(hovered ? AnyShapeStyle(tint) : AnyShapeStyle(Color.secondary))
                 .frame(width: 22, height: 18)
-                .background(
-                    RoundedRectangle(cornerRadius: 5, style: .continuous)
-                        .fill(Color.primary.opacity(hovered ? 0.10 : 0.05))
+                .liquidGlass(
+                    in: RoundedRectangle(cornerRadius: 5, style: .continuous),
+                    interactive: true,
+                    fallbackFill: Color.primary.opacity(hovered ? 0.10 : 0.05),
+                    fallbackStroke: .clear
                 )
         }
         .buttonStyle(.plain)
@@ -1395,10 +1407,16 @@ private struct FooterRow: View {
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 6)
-            .background(
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .fill(Color.primary.opacity(hovered ? 0.06 : 0))
-            )
+            .background {
+                if hovered {
+                    Color.clear.liquidGlass(
+                        in: RoundedRectangle(cornerRadius: 6, style: .continuous),
+                        interactive: true,
+                        fallbackFill: Color.primary.opacity(0.06),
+                        fallbackStroke: .clear
+                    )
+                }
+            }
         }
         .buttonStyle(.plain)
         .onHover { hovered = $0 }
@@ -1477,9 +1495,11 @@ struct LoopChip: View {
             .frame(minWidth: 24)
             .padding(.horizontal, 4)
             .padding(.vertical, 3)
-            .background(
-                RoundedRectangle(cornerRadius: 5, style: .continuous)
-                    .fill(Color.primary.opacity(hovered ? 0.10 : 0.05))
+            .liquidGlass(
+                in: RoundedRectangle(cornerRadius: 5, style: .continuous),
+                interactive: true,
+                fallbackFill: Color.primary.opacity(hovered ? 0.10 : 0.05),
+                fallbackStroke: .clear
             )
         }
         .menuStyle(.borderlessButton)
@@ -1931,21 +1951,7 @@ struct PillButtonStyle: ButtonStyle {
             .foregroundStyle(.white)
             .padding(.horizontal, 12)
             .padding(.vertical, 5)
-            .background(
-                Capsule(style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [tint.opacity(configuration.isPressed ? 0.6 : 0.95),
-                                     tint.opacity(configuration.isPressed ? 0.45 : 0.78)],
-                            startPoint: .top, endPoint: .bottom
-                        )
-                    )
-                    .overlay(
-                        Capsule(style: .continuous)
-                            .strokeBorder(.white.opacity(0.22), lineWidth: 0.5)
-                    )
-                    .shadow(color: tint.opacity(hovered ? 0.45 : 0.25), radius: hovered ? 6 : 3, y: 2)
-            )
+            .prominentGlassCapsule(tint: tint)
             .scaleEffect(configuration.isPressed ? 0.97 : (hovered ? 1.04 : 1.0))
             .animation(.spring(response: 0.28, dampingFraction: 0.7), value: hovered)
             .animation(.spring(response: 0.16, dampingFraction: 0.6), value: configuration.isPressed)

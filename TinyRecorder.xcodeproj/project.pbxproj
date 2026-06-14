@@ -24,6 +24,8 @@
 		AB0000000000000000000115 /* SoundController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF0000000000000000000115 /* SoundController.swift */; };
 		AB0000000000000000000116 /* VisualEffects.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF0000000000000000000116 /* VisualEffects.swift */; };
 		AB0000000000000000000117 /* WelcomeWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF0000000000000000000117 /* WelcomeWindow.swift */; };
+		AB0000000000000000000118 /* MacroImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF0000000000000000000118 /* MacroImport.swift */; };
+		AB0000000000000000000119 /* TextMacroFormat.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF0000000000000000000119 /* TextMacroFormat.swift */; };
 		AB0000000000000000000200 /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = AF0000000000000000000200 /* AppIcon.icns */; };
 /* End PBXBuildFile section */
 
@@ -45,6 +47,8 @@
 		AF0000000000000000000115 /* SoundController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundController.swift; sourceTree = "<group>"; };
 		AF0000000000000000000116 /* VisualEffects.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisualEffects.swift; sourceTree = "<group>"; };
 		AF0000000000000000000117 /* WelcomeWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeWindow.swift; sourceTree = "<group>"; };
+		AF0000000000000000000118 /* MacroImport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacroImport.swift; sourceTree = "<group>"; };
+		AF0000000000000000000119 /* TextMacroFormat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextMacroFormat.swift; sourceTree = "<group>"; };
 		AF0000000000000000000200 /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = AppIcon.icns; sourceTree = "<group>"; };
 		AF0000000000000000000201 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		AF0000000000000000000300 /* TinyRecorder.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TinyRecorder.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -107,6 +111,8 @@
 				AF0000000000000000000115 /* SoundController.swift */,
 				AF0000000000000000000116 /* VisualEffects.swift */,
 				AF0000000000000000000117 /* WelcomeWindow.swift */,
+				AF0000000000000000000118 /* MacroImport.swift */,
+				AF0000000000000000000119 /* TextMacroFormat.swift */,
 			);
 			path = TinyRecorder;
 			sourceTree = "<group>";
@@ -197,6 +203,8 @@
 				AB0000000000000000000115 /* SoundController.swift in Sources */,
 				AB0000000000000000000116 /* VisualEffects.swift in Sources */,
 				AB0000000000000000000117 /* WelcomeWindow.swift in Sources */,
+				AB0000000000000000000118 /* MacroImport.swift in Sources */,
+				AB0000000000000000000119 /* TextMacroFormat.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

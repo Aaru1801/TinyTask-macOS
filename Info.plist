@@ -11,7 +11,7 @@
 	<key>CFBundleVersion</key>
 	<string>1</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.4.0</string>
+	<string>1.5.0</string>
 	<key>CFBundleExecutable</key>
 	<string>TinyRecorder</string>
 	<key>CFBundleIconFile</key>
@@ -47,6 +47,30 @@
 			<array>
 				<string>com.tinyrecorder.macro</string>
 			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>TinyTask Macro</string>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>rec</string>
+			</array>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
+		</dict>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>TinyRecorder Text Macro</string>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>trm</string>
+			</array>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSHandlerRank</key>
+			<string>Owner</string>
 		</dict>
 	</array>
 	<key>UTExportedTypeDeclarations</key>
