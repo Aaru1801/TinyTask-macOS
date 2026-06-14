@@ -1,7 +1,7 @@
 # Build artifacts
 .build/
 .swiftpm/
-TinyRecorder.app/
+TinyRecorder*.app/
 
 # macOS
 .DS_Store

@@ -1,13 +1,25 @@
 #!/bin/bash
-# Build a proper TinyRecorder.app bundle (required for menu bar apps so
-# Accessibility / Input Monitoring permissions remain stable).
+# Build TinyRecorder.app and install it to /Applications.
+#
+# Why /Applications: macOS ties Accessibility / Input Monitoring (TCC) grants to a
+# bundle's path *and* code signature. A single bundle at the standard, immutable
+# location is the most reliable place for those grants to persist — far better
+# than running a copy out of ~/Documents, and it avoids the "every copy needs its
+# own grant" trap.
+#
+# Caveat: we ad-hoc sign (no paid Developer ID), so the bundle has no stable
+# signing identity and TCC falls back to the binary's cdhash. The cdhash changes
+# on every rebuild, so macOS may ask you to re-grant after an update. The only
+# full fix is signing with a stable Developer ID certificate.
 set -euo pipefail
 
 APP_NAME="TinyRecorder"
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 BUILD_DIR="${ROOT}/.build/release"
-APP_BUNDLE="${ROOT}/${APP_NAME}.app"
-CONTENTS="${APP_BUNDLE}/Contents"
+STAGE="${ROOT}/.build/${APP_NAME}.app"        # assembled here first (gitignored)
+INSTALL_DIR="/Applications"
+APP_BUNDLE="${INSTALL_DIR}/${APP_NAME}.app"   # final, stable location
+CONTENTS="${STAGE}/Contents"
 
 cd "$ROOT"
 
@@ -22,7 +34,7 @@ echo "→ Compiling (release)..."
 swift build -c release
 
 echo "→ Bundling ${APP_NAME}.app..."
-rm -rf "$APP_BUNDLE"
+rm -rf "$STAGE"
 mkdir -p "${CONTENTS}/MacOS"
 mkdir -p "${CONTENTS}/Resources"
 
@@ -36,17 +48,20 @@ chmod +x "${CONTENTS}/MacOS/${APP_NAME}"
 BUILD_NUM=$(git -C "$ROOT" rev-list --count HEAD 2>/dev/null || echo 1)
 /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUM" "${CONTENTS}/Info.plist"
 
-# Strip extended attributes (Finder info / resource forks accreted from screenshots,
-# launches, etc.) — codesign refuses to sign a bundle that carries them.
+echo "→ Installing to ${INSTALL_DIR}..."
+rm -rf "$APP_BUNDLE"
+mkdir -p "$INSTALL_DIR"
+cp -R "$STAGE" "$APP_BUNDLE"
+
+# Strip extended attributes (Finder info / resource forks accreted from copies,
+# screenshots, launches) — codesign refuses to sign a bundle that carries them.
 xattr -cr "$APP_BUNDLE"
 
-# Ad-hoc sign so accessibility permissions stick across rebuilds.
-# A signing failure should abort the build loudly, not be swallowed.
+# Ad-hoc sign the installed bundle (see header note on why this doesn't fully
+# survive rebuilds). A signing failure should abort the build loudly.
 echo "→ Ad-hoc signing..."
 codesign --force --sign - "$APP_BUNDLE"
 
 echo
-echo "✅ Built: ${APP_BUNDLE}"
+echo "✅ Installed: ${APP_BUNDLE}"
 echo "   Run:  open \"${APP_BUNDLE}\""
-echo "   Move to /Applications for stable permissions:"
-echo "     mv \"${APP_BUNDLE}\" /Applications/"

@@ -198,8 +198,10 @@ struct PopoverContentView: View {
             .padding(.top, 12)
             .padding(.bottom, 8)
 
-            if !state.accessibilityGranted {
-                PermissionBanner(controller: controller)
+            if !state.accessibilityGranted || !state.inputMonitoringGranted {
+                PermissionBanner(controller: controller,
+                                 accessibilityGranted: state.accessibilityGranted,
+                                 inputMonitoringGranted: state.inputMonitoringGranted)
                     .padding(.horizontal, 12)
                     .padding(.bottom, 8)
                     .transition(.opacity.combined(with: .move(edge: .top)))
@@ -1437,6 +1439,8 @@ private struct FooterRow: View {
 
 private struct PermissionBanner: View {
     let controller: MenuBarController
+    var accessibilityGranted: Bool = true
+    var inputMonitoringGranted: Bool = true
     var body: some View {
         HStack(spacing: 10) {
             Image(systemName: "exclamationmark.shield.fill")
@@ -1452,7 +1456,11 @@ private struct PermissionBanner: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             Spacer()
-            Button("Open") { controller.openAccessibilityPrefs() }
+            Button("Open") {
+                // Send the user to whichever pane is still missing.
+                if !accessibilityGranted { controller.openAccessibilityPrefs() }
+                else { controller.openInputMonitoringPrefs() }
+            }
                 .buttonStyle(PillButtonStyle(tint: .orange))
         }
         .padding(.horizontal, 12)
@@ -1883,12 +1891,12 @@ struct SettingsPanel: View {
                 }
 
                 settingsGroup("Permissions", systemImage: "lock.shield") {
-                    HStack(spacing: 8) {
-                        Button("Accessibility") { controller.openAccessibilityPrefs() }
-                            .buttonStyle(PillButtonStyle(tint: .blue))
-                        Button("Input Monitoring") { controller.openInputMonitoringPrefs() }
-                            .buttonStyle(PillButtonStyle(tint: .blue))
-                    }
+                    permissionRow(title: "Accessibility",
+                                  granted: state.accessibilityGranted,
+                                  action: controller.openAccessibilityPrefs)
+                    permissionRow(title: "Input Monitoring",
+                                  granted: state.inputMonitoringGranted,
+                                  action: controller.openInputMonitoringPrefs)
                 }
 
                 HStack {
@@ -1934,6 +1942,28 @@ struct SettingsPanel: View {
             VStack(alignment: .leading, spacing: 8) { content() }
                 .padding(10)
                 .cardSurface(cornerRadius: 10)
+        }
+    }
+
+    /// One permission row: shows a green "Granted" status when the permission is
+    /// held, or a blue "Grant…" button (opens System Settings) when it isn't — so
+    /// an already-granted permission never lingers looking like an open prompt.
+    @ViewBuilder
+    private func permissionRow(title: String, granted: Bool, action: @escaping () -> Void) -> some View {
+        HStack(spacing: 8) {
+            Text(title).font(.system(size: 11.5))
+            Spacer()
+            if granted {
+                HStack(spacing: 4) {
+                    Image(systemName: "checkmark.circle.fill")
+                    Text("Granted")
+                }
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.green)
+            } else {
+                Button("Grant…") { action() }
+                    .buttonStyle(PillButtonStyle(tint: .blue))
+            }
         }
     }
 

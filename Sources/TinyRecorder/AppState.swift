@@ -2,6 +2,7 @@ import Foundation
 import SwiftUI
 import Combine
 import ApplicationServices
+import IOKit.hid
 
 /// Simple key code description used for hotkey labels.
 struct HotkeyBinding: Codable, Equatable {
@@ -28,6 +29,11 @@ final class AppState: ObservableObject {
     }
     @Published var statusMessage: String = ""
     @Published var accessibilityGranted: Bool = AXIsProcessTrusted()
+    /// Input Monitoring is a separate TCC permission from Accessibility; both are
+    /// required to record. Polled live alongside Accessibility (see refreshTimer)
+    /// so the UI reflects grants made in System Settings without a relaunch.
+    @Published var inputMonitoringGranted: Bool =
+        IOHIDCheckAccess(kIOHIDRequestTypeListenEvent) == kIOHIDAccessTypeGranted
 
     /// Pre-record countdown seconds. 0 disables.
     @Published var countdownSeconds: Int {
@@ -81,6 +87,10 @@ final class AppState: ObservableObject {
             let trusted = AXIsProcessTrusted()
             if trusted != self.accessibilityGranted {
                 self.accessibilityGranted = trusted
+            }
+            let inputOK = IOHIDCheckAccess(kIOHIDRequestTypeListenEvent) == kIOHIDAccessTypeGranted
+            if inputOK != self.inputMonitoringGranted {
+                self.inputMonitoringGranted = inputOK
             }
         }
     }
