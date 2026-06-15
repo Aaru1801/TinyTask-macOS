@@ -2,43 +2,17 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>CFBundleName</key>
-	<string>TinyRecorder</string>
 	<key>CFBundleDisplayName</key>
 	<string>TinyRecorder</string>
-	<key>CFBundleIdentifier</key>
-	<string>com.tinyrecorder.app</string>
-	<key>CFBundleVersion</key>
-	<string>1</string>
-	<key>CFBundleShortVersionString</key>
-	<string>1.8.1</string>
-	<key>CFBundleExecutable</key>
-	<string>TinyRecorder</string>
-	<key>CFBundleIconFile</key>
-	<string>AppIcon</string>
-	<key>CFBundleIconName</key>
-	<string>AppIcon</string>
-	<key>CFBundlePackageType</key>
-	<string>APPL</string>
-	<key>CFBundleSignature</key>
-	<string>????</string>
-	<key>LSMinimumSystemVersion</key>
-	<string>13.0</string>
-	<key>LSMultipleInstancesProhibited</key>
-	<true/>
-	<key>NSHighResolutionCapable</key>
-	<true/>
-	<key>NSPrincipalClass</key>
-	<string>NSApplication</string>
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>
-			<key>CFBundleTypeName</key>
-			<string>TinyRecorder Macro</string>
 			<key>CFBundleTypeExtensions</key>
 			<array>
 				<string>tinyrec</string>
 			</array>
+			<key>CFBundleTypeName</key>
+			<string>TinyRecorder Macro</string>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>LSHandlerRank</key>
@@ -49,41 +23,71 @@
 			</array>
 		</dict>
 		<dict>
-			<key>CFBundleTypeName</key>
-			<string>TinyTask Macro</string>
 			<key>CFBundleTypeExtensions</key>
 			<array>
 				<string>rec</string>
 			</array>
+			<key>CFBundleTypeName</key>
+			<string>TinyTask Macro</string>
 			<key>CFBundleTypeRole</key>
 			<string>Viewer</string>
 			<key>LSHandlerRank</key>
 			<string>Alternate</string>
 		</dict>
 		<dict>
-			<key>CFBundleTypeName</key>
-			<string>TinyRecorder Text Macro</string>
 			<key>CFBundleTypeExtensions</key>
 			<array>
 				<string>trm</string>
 			</array>
+			<key>CFBundleTypeName</key>
+			<string>TinyRecorder Text Macro</string>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>LSHandlerRank</key>
 			<string>Owner</string>
 		</dict>
 	</array>
+	<key>CFBundleExecutable</key>
+	<string>TinyRecorder</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
+	<key>CFBundleIconName</key>
+	<string>AppIcon</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.tinyrecorder.app</string>
+	<key>CFBundleName</key>
+	<string>TinyRecorder</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.8.1</string>
+	<key>CFBundleSignature</key>
+	<string>????</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>14.0</string>
+	<key>LSMultipleInstancesProhibited</key>
+	<true/>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>TinyRecorder uses system events to record and replay your input.</string>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+	<key>NSHumanReadableCopyright</key>
+	<string>TinyRecorder — a free TinyTask clone for macOS.</string>
+	<key>NSPrincipalClass</key>
+	<string>NSApplication</string>
 	<key>UTExportedTypeDeclarations</key>
 	<array>
 		<dict>
-			<key>UTTypeIdentifier</key>
-			<string>com.tinyrecorder.macro</string>
-			<key>UTTypeDescription</key>
-			<string>TinyRecorder Macro</string>
 			<key>UTTypeConformsTo</key>
 			<array>
 				<string>public.json</string>
 			</array>
+			<key>UTTypeDescription</key>
+			<string>TinyRecorder Macro</string>
+			<key>UTTypeIdentifier</key>
+			<string>com.tinyrecorder.macro</string>
 			<key>UTTypeTagSpecification</key>
 			<dict>
 				<key>public.filename-extension</key>
@@ -93,9 +97,5 @@
 			</dict>
 		</dict>
 	</array>
-	<key>NSHumanReadableCopyright</key>
-	<string>TinyRecorder — a free TinyTask clone for macOS.</string>
-	<key>NSAppleEventsUsageDescription</key>
-	<string>TinyRecorder uses system events to record and replay your input.</string>
 </dict>
 </plist>
