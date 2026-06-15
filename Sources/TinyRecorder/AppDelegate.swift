@@ -10,6 +10,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         installMainMenu()
 
         menuBar = MenuBarController()
+        menuBar.state.refreshPermissions()
         menuBar.showMainWindowHandler = { [weak self] in self?.showMainWindow(nil) }
         // Honor the saved Dock vs menu-bar-only preference.
         menuBar.applyAppearanceMode()

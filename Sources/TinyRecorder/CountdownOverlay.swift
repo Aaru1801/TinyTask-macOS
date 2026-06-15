@@ -174,7 +174,7 @@ private struct CountdownView: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Recording starts in \(model.remaining) seconds")
         .onAppear { pulse = true }
-        .onChange(of: model.sessionSeed) { _ in
+        .onChange(of: model.sessionSeed) {
             // Restart the pulse for each new countdown session.
             pulse = false
             DispatchQueue.main.async { pulse = true }

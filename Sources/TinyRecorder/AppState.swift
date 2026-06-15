@@ -30,8 +30,8 @@ final class AppState: ObservableObject {
     @Published var statusMessage: String = ""
     @Published var accessibilityGranted: Bool = AXIsProcessTrusted()
     /// Input Monitoring is a separate TCC permission from Accessibility; both are
-    /// required to record. Polled live alongside Accessibility (see refreshTimer)
-    /// so the UI reflects grants made in System Settings without a relaunch.
+    /// required to record. Polled live alongside Accessibility so the UI reflects
+    /// grants made in System Settings without a relaunch.
     @Published var inputMonitoringGranted: Bool =
         IOHIDCheckAccess(kIOHIDRequestTypeListenEvent) == kIOHIDAccessTypeGranted
 
@@ -81,22 +81,31 @@ final class AppState: ObservableObject {
 
         SoundController.shared.enabled = self.soundEnabled
 
-        // Fires on the main run loop, so assign directly — no queue hop needed.
-        refreshTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
-            guard let self else { return }
-            let trusted = AXIsProcessTrusted()
-            if trusted != self.accessibilityGranted {
-                self.accessibilityGranted = trusted
-            }
-            let inputOK = IOHIDCheckAccess(kIOHIDRequestTypeListenEvent) == kIOHIDAccessTypeGranted
-            if inputOK != self.inputMonitoringGranted {
-                self.inputMonitoringGranted = inputOK
-            }
+        refreshPermissions()
+
+        // Poll permission state while the app is alive so the warning banner
+        // disappears shortly after the user grants access in System Settings.
+        let timer = Timer(timeInterval: 1.0, repeats: true) { [weak self] _ in
+            self?.refreshPermissions()
         }
+        RunLoop.main.add(timer, forMode: .common)
+        refreshTimer = timer
     }
 
     deinit {
         refreshTimer?.invalidate()
+    }
+
+    func refreshPermissions() {
+        let trusted = AXIsProcessTrusted()
+        if trusted != accessibilityGranted {
+            accessibilityGranted = trusted
+        }
+
+        let inputOK = IOHIDCheckAccess(kIOHIDRequestTypeListenEvent) == kIOHIDAccessTypeGranted
+        if inputOK != inputMonitoringGranted {
+            inputMonitoringGranted = inputOK
+        }
     }
 
     private func persist(_ binding: HotkeyBinding, key: String) {

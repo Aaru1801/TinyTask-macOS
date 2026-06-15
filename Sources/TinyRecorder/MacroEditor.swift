@@ -114,10 +114,10 @@ struct EditorView: View {
             }
         }
         .frame(minWidth: 680, minHeight: 460)
-        .onChange(of: selection) { _ in loadInspector() }
+        .onChange(of: selection) { loadInspector() }
         // The active macro changed under us (new recording saved, card clicked,
         // macro deleted) — stale indices would corrupt the new buffer.
-        .onChange(of: library.currentMacroID) { _ in
+        .onChange(of: library.currentMacroID) {
             selection.removeAll()
         }
         .onDisappear { controller.persistEdits() }

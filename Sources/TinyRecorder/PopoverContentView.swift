@@ -111,9 +111,10 @@ struct PopoverContentView: View {
             maxHeight: isWindow ? .infinity : 540
         )
         .animation(.spring(response: 0.35, dampingFraction: 0.85), value: state.accessibilityGranted)
+        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: state.inputMonitoringGranted)
         .animation(.spring(response: 0.3, dampingFraction: 0.85), value: filteredMacros.count)
         .animation(.spring(response: 0.3, dampingFraction: 0.85), value: filter)
-        .onChange(of: filter) { _ in selection.removeAll() }
+        .onChange(of: filter) { selection.removeAll() }
         .sheet(item: $showAssignHotkey) { macro in
             HotkeyAssignmentSheet(
                 macro: macro,
@@ -198,16 +199,16 @@ struct PopoverContentView: View {
             .padding(.top, 12)
             .padding(.bottom, 8)
 
-            #if !HIDE_PERMISSION_BANNER
             if !state.accessibilityGranted || !state.inputMonitoringGranted {
-                PermissionBanner(controller: controller,
-                                 accessibilityGranted: state.accessibilityGranted,
-                                 inputMonitoringGranted: state.inputMonitoringGranted)
-                    .padding(.horizontal, 12)
-                    .padding(.bottom, 8)
-                    .transition(.opacity.combined(with: .move(edge: .top)))
+                PermissionBanner(
+                    controller: controller,
+                    accessibilityGranted: state.accessibilityGranted,
+                    inputMonitoringGranted: state.inputMonitoringGranted
+                )
+                .padding(.horizontal, 12)
+                .padding(.bottom, 8)
+                .transition(.opacity.combined(with: .move(edge: .top)))
             }
-            #endif
 
             if !visibleSelection.isEmpty {
                 SelectionToolbar(
@@ -358,7 +359,7 @@ struct PopoverContentView: View {
                 .padding(.vertical, 5)
                 .transition(.opacity)
                 .onAppear { scheduleStatusClear() }
-                .onChange(of: state.statusMessage) { _ in scheduleStatusClear() }
+                .onChange(of: state.statusMessage) { scheduleStatusClear() }
             }
 
             Divider().opacity(0.5)
@@ -806,6 +807,7 @@ private struct MacroCard: View {
     @State private var dragOver = false
     @State private var showCustomSpeed = false
     @State private var customSpeedText = ""
+    @FocusState private var cardFocused: Bool
     @FocusState private var renameFocused: Bool
 
     private var durationText: String {
@@ -817,7 +819,6 @@ private struct MacroCard: View {
     }
 
     private var strokeColor: Color {
-        if isSelected { return cardAccentColor(for: macro.accent) }
         if isCurrent { return cardAccentColor(for: macro.accent).opacity(0.55) }
         if dragOver { return Color.accentColor.opacity(0.6) }
         return Color.primary.opacity(0.10)
@@ -833,6 +834,8 @@ private struct MacroCard: View {
             // Keyboard + assistive access: the card is one focusable element with
             // every action exposed; Delete key removes, Escape commits a rename.
             .focusable()
+            .focused($cardFocused)
+            .focusEffectDisabled()
             .onDeleteCommand { onDelete() }
             .onExitCommand {
                 if isRenaming { onCommitRename() }
@@ -879,7 +882,11 @@ private struct MacroCard: View {
             .background { cardBackground }
             .overlay(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .strokeBorder(strokeColor, lineWidth: isSelected ? 1.4 : (isCurrent ? 1.0 : 0.5))
+                    .strokeBorder(strokeColor, lineWidth: isCurrent ? 1.0 : 0.5)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .strokeBorder(Color.accentColor.opacity(cardFocused ? 0.9 : 0), lineWidth: 2.5)
             )
             .shadow(
                 color: .black.opacity(hovered ? 0.16 : 0.07),
@@ -890,13 +897,14 @@ private struct MacroCard: View {
             .animation(.spring(response: 0.25, dampingFraction: 0.85), value: hovered)
             .animation(Brand.spring, value: isCurrent)
             .animation(Brand.spring, value: isSelected)
+            .animation(Brand.spring, value: cardFocused)
             .animation(Brand.spring, value: dragOver)
     }
 
     /// The card surface. Cards are the CONTENT layer, so per Apple's Liquid Glass
     /// guidance they are NOT glass — glass belongs to the floating control layer
     /// (Record button, HUD, countdown). A card is an opaque adaptive surface;
-    /// selection/current state is a restrained accent fill + the stroke overlay,
+    /// current state is a restrained accent fill + the stroke overlay,
     /// never a heavy colored wash.
     @ViewBuilder
     private var cardBackground: some View {
@@ -904,7 +912,7 @@ private struct MacroCard: View {
         let tint = cardAccentColor(for: macro.accent)
         ZStack {
             shape.fill(Color(nsColor: .controlBackgroundColor))
-            shape.fill(tint.opacity(isSelected ? 0.10 : (isCurrent ? 0.055 : 0)))
+            shape.fill(tint.opacity(isCurrent ? 0.055 : 0))
         }
     }
 
@@ -1439,18 +1447,17 @@ private struct FooterRow: View {
 
 // MARK: - Permission banner
 
-// Compiled out of "ship" builds via -DHIDE_PERMISSION_BANNER (see build.sh
-// TINYRECORDER_SWIFT_FLAGS) — normal builds always include it.
-#if !HIDE_PERMISSION_BANNER
 private struct PermissionBanner: View {
     let controller: MenuBarController
-    var accessibilityGranted: Bool = true
-    var inputMonitoringGranted: Bool = true
+    let accessibilityGranted: Bool
+    let inputMonitoringGranted: Bool
+
     var body: some View {
         HStack(spacing: 10) {
             Image(systemName: "exclamationmark.shield.fill")
                 .foregroundStyle(.orange)
                 .font(.system(size: 16))
+
             VStack(alignment: .leading, spacing: 2) {
                 Text("Permissions required")
                     .font(.system(size: 12, weight: .semibold))
@@ -1460,13 +1467,17 @@ private struct PermissionBanner: View {
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
+
             Spacer()
+
             Button("Open") {
-                // Send the user to whichever pane is still missing.
-                if !accessibilityGranted { controller.openAccessibilityPrefs() }
-                else { controller.openInputMonitoringPrefs() }
+                if !accessibilityGranted {
+                    controller.openAccessibilityPrefs()
+                } else if !inputMonitoringGranted {
+                    controller.openInputMonitoringPrefs()
+                }
             }
-                .buttonStyle(PillButtonStyle(tint: .orange))
+            .buttonStyle(PillButtonStyle(tint: .orange))
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
@@ -1480,7 +1491,6 @@ private struct PermissionBanner: View {
         )
     }
 }
-#endif
 
 // MARK: - Loop chip
 

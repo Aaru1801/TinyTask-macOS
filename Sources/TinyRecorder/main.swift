@@ -108,7 +108,7 @@ let twin = NSWorkspace.shared.runningApplications.first { app in
      app.executableURL?.lastPathComponent == "TinyRecorder")
 }
 if let twin {
-    twin.activate(options: [.activateIgnoringOtherApps])
+    twin.activate()
     exit(0)
 }
 

@@ -235,7 +235,7 @@ struct RecordingHUDView: View {
         )
         .environment(\.colorScheme, .dark)
         .onAppear { pulse = recorder.isRecording }
-        .onChange(of: recorder.isRecording) { recording in pulse = recording }
+        .onChange(of: recorder.isRecording) { _, recording in pulse = recording }
     }
 }
 
