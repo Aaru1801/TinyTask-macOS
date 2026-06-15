@@ -7,6 +7,11 @@ TinyRecorder*.app/
 .DS_Store
 Icon?
 
+# Xcode
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+DerivedData/
+
 # Editor/session
 *.xcuserstate
 PR_BODY.md
