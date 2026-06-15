@@ -18,8 +18,10 @@ APP_NAME="TinyRecorder"
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 BUILD_DIR="${ROOT}/.build/release"
 STAGE="${ROOT}/.build/${APP_NAME}.app"        # assembled here first (gitignored)
-INSTALL_DIR="/Applications"
-APP_BUNDLE="${INSTALL_DIR}/${APP_NAME}.app"   # final, stable location
+# Install location can be overridden (e.g. to build a one-off copy on the Desktop
+# without disturbing the /Applications install).
+INSTALL_DIR="${TINYRECORDER_INSTALL_DIR:-/Applications}"
+APP_BUNDLE="${INSTALL_DIR}/${APP_NAME}.app"   # final location
 CONTENTS="${STAGE}/Contents"
 
 cd "$ROOT"
@@ -32,7 +34,9 @@ if [ ! -f "AppIcon.icns" ] || [ "tools/make_icon.swift" -nt "AppIcon.icns" ]; th
 fi
 
 echo "→ Compiling (release)..."
-swift build -c release
+# Extra swiftc flags can be injected, e.g. TINYRECORDER_SWIFT_FLAGS="-Xswiftc -DHIDE_PERMISSION_BANNER".
+# Unquoted on purpose so multiple flags word-split into separate arguments.
+swift build -c release ${TINYRECORDER_SWIFT_FLAGS:-}
 
 echo "→ Bundling ${APP_NAME}.app..."
 rm -rf "$STAGE"
@@ -54,9 +58,18 @@ rm -rf "$APP_BUNDLE"
 mkdir -p "$INSTALL_DIR"
 cp -R "$STAGE" "$APP_BUNDLE"
 
-# Strip extended attributes (Finder info / resource forks accreted from copies,
-# screenshots, launches) — codesign refuses to sign a bundle that carries them.
-xattr -cr "$APP_BUNDLE"
+# Sign the bundle, stripping extended attributes first. Writing into a
+# Finder-watched dir (e.g. ~/Desktop) can race in com.apple.FinderInfo/macl that
+# codesign rejects as "detritus", so clear-then-sign with one retry.
+#   $1 = extra codesign flags (may be empty), $2 = identity ("-" for ad-hoc)
+sign_app() {
+    xattr -cr "$APP_BUNDLE" 2>/dev/null || true
+    if ! codesign --force $1 --sign "$2" "$APP_BUNDLE" 2>/dev/null; then
+        echo "  …xattr race; clearing and retrying"
+        xattr -cr "$APP_BUNDLE" 2>/dev/null || true
+        codesign --force $1 --sign "$2" "$APP_BUNDLE"
+    fi
+}
 
 # Prefer a Developer ID Application identity when one is installed: a stable
 # signature means TCC (Accessibility / Input Monitoring) grants persist across
@@ -82,17 +95,17 @@ if [ -n "$SIGN_ID" ]; then
     case "$SIGN_ID" in
         *"Developer ID"*)
             echo "→ Signing with Developer ID (hardened runtime): ${SIGN_ID}"
-            codesign --force --options runtime --timestamp --sign "$SIGN_ID" "$APP_BUNDLE"
+            sign_app "--options runtime --timestamp" "$SIGN_ID"
             ;;
         *)
             echo "→ Signing with stable identity (TCC grants persist): ${SIGN_ID}"
-            codesign --force --sign "$SIGN_ID" "$APP_BUNDLE"
+            sign_app "" "$SIGN_ID"
             ;;
     esac
     SIGNED_WITH="$SIGN_ID"
 else
     echo "→ No signing identity found — ad-hoc signing (permissions re-prompt per rebuild)."
-    codesign --force --sign - "$APP_BUNDLE"
+    sign_app "" "-"
     SIGNED_WITH="ad-hoc"
 fi
 
