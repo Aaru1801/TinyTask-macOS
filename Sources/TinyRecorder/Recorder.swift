@@ -30,6 +30,8 @@ final class Recorder: ObservableObject {
     @Published private(set) var isRecording = false
     @Published private(set) var events: [RecordedEvent] = []
     @Published private(set) var liveDuration: TimeInterval = 0
+    /// Replacing the buffer or restoring history invalidates editor row selection.
+    @Published private(set) var bufferRevision: UInt64 = 0
     /// Maintained incrementally as pending events flush. The HUD redraws at 10 Hz,
     /// so rescanning an hours-long recording on every frame quickly became O(n²).
     private(set) var liveStats = CaptureStats()
@@ -43,9 +45,13 @@ final class Recorder: ObservableObject {
     /// @Published mutations caused a SwiftUI re-render per input event, which
     /// could starve the tap into timeout during fast input.
     private var pending: [RecordedEvent] = []
+    private weak var editUndoManager: UndoManager?
+    private var keyboardFilter = RecordingKeyboardFilter()
 
     /// Key codes the recorder must NOT capture (our own hotkeys).
-    var ignoredKeyCodes: Set<UInt16> = []
+    var ignoredKeyCodes: Set<UInt16> = [] {
+        didSet { keyboardFilter.ignoredKeyCodes = ignoredKeyCodes }
+    }
 
     var eventCount: Int { events.count }
 
@@ -59,12 +65,52 @@ final class Recorder: ObservableObject {
 
     /// Replace the in-memory event list (used when opening a saved macro).
     func loadEvents(_ new: [RecordedEvent]) {
+        guard !isRecording else { return }
+        resetEditHistory()
+        replaceEvents(new)
+    }
+
+    private func replaceEvents(_ new: [RecordedEvent]) {
         events = RecordedEvent.normalized(new)
         liveStats = Self.stats(for: events)
         liveDuration = events.last?.time ?? 0
+        bufferRevision &+= 1
     }
 
     // MARK: - Editing
+
+    /// History belongs to the current buffer. Loading another macro or starting
+    /// a recording removes only this recorder's actions from the window's history.
+    private func resetEditHistory() {
+        editUndoManager?.removeAllActions(withTarget: self)
+        editUndoManager = nil
+    }
+
+    func performEdit(named name: String, undoManager: UndoManager?, _ mutate: () -> Void) {
+        guard !isRecording else { return }
+        let snapshot = events
+        mutate()
+        guard events != snapshot else { return }
+        liveStats = Self.stats(for: events)
+        if editUndoManager !== undoManager {
+            resetEditHistory()
+            editUndoManager = undoManager
+        }
+        if let undoManager {
+            registerUndo(restoring: snapshot, named: name, with: undoManager)
+        }
+    }
+
+    private func registerUndo(restoring snapshot: [RecordedEvent], named name: String, with undoManager: UndoManager) {
+        undoManager.registerUndo(withTarget: self) { [weak undoManager] recorder in
+            guard let undoManager, !recorder.isRecording else { return }
+            // Register the inverse on every restore, including redo, so repeated
+            // undo/redo cycles retain the full edit history.
+            recorder.registerUndo(restoring: recorder.events, named: name, with: undoManager)
+            recorder.replaceEvents(snapshot)
+        }
+        undoManager.setActionName(name)
+    }
 
     func deleteEvents(at indices: IndexSet) {
         let sorted = indices.sorted(by: >)
@@ -184,10 +230,16 @@ final class Recorder: ObservableObject {
         // Do not discard the active macro until the system has actually given us
         // a usable tap. Otherwise a denied permission can leave an empty buffer
         // that a later save would write over the user's macro.
+        resetEditHistory()
+        bufferRevision &+= 1
         events.removeAll()
         pending.removeAll()
         liveStats = CaptureStats()
         liveDuration = 0
+        let heldKeys = Set((UInt16(0)...UInt16(127)).filter {
+            CGEventSource.keyState(.combinedSessionState, key: $0)
+        })
+        keyboardFilter.reset(heldKeys: heldKeys)
         startTime = CFAbsoluteTimeGetCurrent()
         tap = newTap
         let runLoopSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, newTap, 0)
@@ -268,13 +320,16 @@ final class Recorder: ObservableObject {
             return
         }
 
-        // A menu-bar popover can activate TinyRecorder during capture without
-        // occupying the pointer's eventual key-event location. Never serialize
-        // typing or shortcuts while this app itself owns keyboard focus.
-        if kind.isKey, NSApp.isActive { return }
-
         let keyCode = UInt16(event.getIntegerValueField(.keyboardEventKeycode))
-        if kind.isKey, ignoredKeyCodes.contains(keyCode) { return }
+        // Keep control key presses and their releases out of the macro, even
+        // when a native command hides the app before its keys are released.
+        // Other input continues recording while a control key is held.
+        if kind.isKey, keyboardFilter.shouldIgnore(
+            type: type, keyCode: keyCode, appIsActive: NSApp.isActive,
+            keyIsDown: type == .flagsChanged
+                ? CGEventSource.keyState(.combinedSessionState, key: keyCode)
+                : type == .keyDown
+        ) { return }
 
         let elapsed = CFAbsoluteTimeGetCurrent() - startTime
         let loc = event.location

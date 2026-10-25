@@ -11,6 +11,10 @@ let package = Package(
         .executableTarget(
             name: "TinyRecorder",
             path: "Sources/TinyRecorder"
+        ),
+        .testTarget(
+            name: "TinyRecorderTests",
+            dependencies: ["TinyRecorder"]
         )
     ]
 )

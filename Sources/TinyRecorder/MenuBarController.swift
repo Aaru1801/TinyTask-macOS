@@ -220,7 +220,7 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
     func cancelRecording() {
         guard recorder.isRecording else { return }
         recorder.stopRecording()
-        recorder.clearAll()
+        recorder.loadEvents([])
         // Restore the previously-active macro (if any) into the recorder buffer
         // so we don't leave the editor pointing at nothing.
         if let m = library.currentMacro {
@@ -259,13 +259,21 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] accessibilityGranted, inputMonitoringGranted in
                 guard let self,
-                      (!accessibilityGranted || !inputMonitoringGranted),
-                      self.recorder.isRecording else { return }
-                self.recorder.stopRecording()
-                self.hud?.hide()
+                      (!accessibilityGranted || !inputMonitoringGranted) else { return }
+                let activity: String
+                if self.recorder.isRecording {
+                    self.recorder.stopRecording()
+                    self.hud?.hide()
+                    activity = "Recording"
+                } else if self.player.isPlaying || self.playbackPending {
+                    self.stopPlayback()
+                    activity = "Playback"
+                } else {
+                    return
+                }
                 self.state.statusMessage = accessibilityGranted
-                    ? "Recording stopped — Input Monitoring permission was revoked."
-                    : "Recording stopped — Accessibility permission was revoked."
+                    ? "\(activity) stopped — Input Monitoring permission was revoked."
+                    : "\(activity) stopped — Accessibility permission was revoked."
                 SoundController.shared.play(.error)
             }
             .store(in: &cancellables)
@@ -344,6 +352,10 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
     }
 
     func selectMacro(_ id: UUID) {
+        guard library.macros.contains(where: { $0.id == id }) else { return }
+        // Selecting a saved macro replaces the recorder buffer. Finish the live
+        // capture first so its events become their own saved macro.
+        if recorder.isRecording { toggleRecording() }
         persistCurrentMacroIfNeeded()
         library.select(id: id)
         if let m = library.currentMacro {
@@ -362,14 +374,15 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
 
     func deleteMacro(_ id: UUID) {
         // Only reload the recorder buffer when the CURRENT macro was deleted;
-        // otherwise we'd wipe unsaved editor edits to an unrelated macro.
+        // otherwise we'd wipe unsaved editor edits to an unrelated macro. A live
+        // recording owns the buffer until it is saved, regardless of selection.
         let wasCurrent = (id == library.currentMacroID)
         library.delete(id: id)
-        if wasCurrent {
+        if wasCurrent && !recorder.isRecording {
             if let m = library.currentMacro {
                 recorder.loadEvents(m.events)
             } else {
-                recorder.clearAll()
+                recorder.loadEvents([])
             }
         }
     }
@@ -377,11 +390,11 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
     func deleteMacros(_ ids: Set<UUID>) {
         let wasCurrent = library.currentMacroID.map { ids.contains($0) } ?? false
         library.deleteMany(ids: ids)
-        if wasCurrent {
+        if wasCurrent && !recorder.isRecording {
             if let m = library.currentMacro {
                 recorder.loadEvents(m.events)
             } else {
-                recorder.clearAll()
+                recorder.loadEvents([])
             }
         }
     }
@@ -439,6 +452,7 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
     // MARK: - Actions
 
     func toggleRecording() {
+        guard !HotkeyManager.shared.shouldSuppressControlAction else { return }
         // A second press during the countdown means "never mind".
         if let countdown, countdown.isActive {
             countdown.cancel()
@@ -552,12 +566,18 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
     }
 
     func play() {
+        guard !HotkeyManager.shared.shouldSuppressControlAction else { return }
         play(isChained: false)
     }
 
     private func play(isChained: Bool) {
         guard state.accessibilityGranted else {
             state.statusMessage = "Playback requires Accessibility permission."
+            SoundController.shared.play(.error)
+            return
+        }
+        guard state.inputMonitoringGranted else {
+            state.statusMessage = "Playback requires Input Monitoring to stop when you use the mouse or keyboard."
             SoundController.shared.play(.error)
             return
         }
@@ -600,7 +620,17 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
 
             // Completion arrives on the main actor. `finished` is false when the
             // run was cancelled — skip stats, sound, status, and the chain.
-            self.player.play(events: events, loops: loops, speed: speed) { [weak self] finished in
+            self.player.play(events: events, loops: loops, speed: speed, onInterruption: { [weak self] reason in
+                guard let self else { return }
+                self.stopPlayback()
+                switch reason {
+                case .userInput:
+                    self.state.statusMessage = "Playback stopped — mouse or keyboard input detected."
+                case .inputMonitoringUnavailable:
+                    self.state.statusMessage = "Could not monitor input. Check Input Monitoring permission before playing."
+                    SoundController.shared.play(.error)
+                }
+            }) { [weak self] finished in
                 guard let self else { return }
                 // Look the chain up LIVE (not from the stale pre-playback copy)
                 // so clearing it mid-run is respected.
@@ -678,6 +708,7 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
 
     /// Play a specific saved macro by id (used by per-macro hotkeys + library card buttons).
     func playMacroByID(_ id: UUID) {
+        guard !HotkeyManager.shared.shouldSuppressControlAction else { return }
         guard let macro = library.macros.first(where: { $0.id == id }) else { return }
         if recorder.isRecording { toggleRecording() }
         if player.isPlaying || playbackPending { stopPlayback() }

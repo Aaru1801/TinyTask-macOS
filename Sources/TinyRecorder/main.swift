@@ -25,14 +25,25 @@ if args.count >= 3, args[1] == "--play" {
             loops = 1
         }
 
-        // Post events from a background thread with plain sleeps — no run-loop
-        // pumping, no MainActor hops, so timing stays faithful to the recording.
+        // Keep the main run loop available for the input tap while a background
+        // thread posts the macro. Exported scripts stop on user input too.
+        let cancellation = PlaybackCancellation()
+        let inputMonitor = PlaybackInputMonitor()
+        guard inputMonitor.start(onInput: { cancellation.cancel() }) else {
+            FileHandle.standardError.write(Data(
+                "TinyRecorder: cannot monitor user input. Enable Input Monitoring in System Settings before playing.\n".utf8
+            ))
+            exit(1)
+        }
         let semaphore = DispatchSemaphore(value: 0)
         Thread.detachNewThread {
-            Player.playSynchronously(events: events, loops: loops, speed: speed)
+            Player.playSynchronously(events: events, loops: loops, speed: speed, cancellation: cancellation)
             semaphore.signal()
         }
-        semaphore.wait()
+        while semaphore.wait(timeout: .now()) != .success {
+            RunLoop.current.run(until: Date(timeIntervalSinceNow: 0.02))
+        }
+        inputMonitor.stop()
         exit(0)
     } catch {
         FileHandle.standardError.write(Data("TinyRecorder: failed to play \(path): \(error)\n".utf8))

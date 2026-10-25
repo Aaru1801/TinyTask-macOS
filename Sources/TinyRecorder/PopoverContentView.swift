@@ -50,24 +50,13 @@ struct PopoverContentView: View {
     var body: some View {
         ZStack {
             ZStack {
-                VisualEffectBackground(material: isWindow ? .windowBackground : .popover, blendingMode: .behindWindow)
-                    .ignoresSafeArea()
+                Brand.canvas.ignoresSafeArea()
 
                 if isWindow {
                     VStack(spacing: 0) {
-                        // Custom titlebar strip: wordmark centered, traffic lights
-                        // live in the leading inset.
-                        ZStack {
-                            Wordmark(size: 12)
-                        }
-                        .frame(height: 32)
-                        .frame(maxWidth: .infinity)
-                        .background(VisualEffectBackground(material: .titlebar, blendingMode: .withinWindow))
-                        .overlay(Divider().opacity(0.5), alignment: .bottom)
-
                         HStack(spacing: 0) {
                             LibrarySidebar(controller: controller, filter: $filter)
-                                .frame(width: 160)
+                                .frame(width: 188)
                             Divider().opacity(0.5)
                             libraryColumn
                         }
@@ -123,13 +112,14 @@ struct PopoverContentView: View {
             }
         }
         .frame(
-            minWidth: isWindow ? 620 : 400,
-            idealWidth: isWindow ? 720 : 400,
+            minWidth: isWindow ? 760 : 400,
+            idealWidth: isWindow ? 920 : 400,
             maxWidth: isWindow ? .infinity : 400,
-            minHeight: isWindow ? 390 : 500,
-            idealHeight: isWindow ? 460 : 500,
+            minHeight: isWindow ? 500 : 500,
+            idealHeight: isWindow ? 600 : 500,
             maxHeight: isWindow ? .infinity : 500
         )
+        .tint(Brand.red500)
         .animation(.spring(response: 0.35, dampingFraction: 0.85), value: state.accessibilityGranted)
         .animation(.spring(response: 0.35, dampingFraction: 0.85), value: state.inputMonitoringGranted)
         .animation(Brand.spring, value: state.recordingCountdownActive)
@@ -224,17 +214,16 @@ struct PopoverContentView: View {
                 searchFocused: $searchFocused,
                 isWindow: isWindow,
                 macroCount: library.macros.count,
+                title: filter == .all ? "Your macros" : filter.label,
                 onQuickRun: { withAnimation(Brand.spring) { showQuickRun = true } }
             )
-            .padding(.horizontal, isWindow ? 10 : 12)
-            .padding(.top, isWindow ? 9 : 10)
-            .padding(.bottom, isWindow ? 9 : 7)
-            .background(Color.primary.opacity(isWindow ? 0.018 : 0))
-            .overlay(Divider().opacity(isWindow ? 0.35 : 0), alignment: .bottom)
+            .padding(.horizontal, isWindow ? 24 : 16)
+            .padding(.top, isWindow ? 22 : 16)
+            .padding(.bottom, isWindow ? 22 : 12)
 
             if hasLiveActivity {
                 ActivityCenterView(controller: controller, compact: !isWindow)
-                    .padding(.horizontal, isWindow ? 10 : 12)
+                    .padding(.horizontal, isWindow ? 24 : 16)
                     .padding(.top, 8)
                     .padding(.bottom, 8)
                     .transition(.move(edge: .top).combined(with: .opacity))
@@ -304,27 +293,27 @@ struct PopoverContentView: View {
                 // Computed once for the whole grid, not per card.
                 let allChainCandidates = library.macros.map { ($0.id, $0.name) }
                 ScrollView {
-                    // Section label, mockup-style.
                     HStack {
-                        Text(filter.label.uppercased())
-                            .font(.system(size: 10, weight: .semibold))
-                            .tracking(0.8)
+                        Text(search.isEmpty ? "\(filteredMacros.count) saved macro\(filteredMacros.count == 1 ? "" : "s")" : "\(filteredMacros.count) result\(filteredMacros.count == 1 ? "" : "s")")
+                            .font(.system(size: 11, weight: .medium))
                             .foregroundStyle(.secondary)
-                        Text("\(filteredMacros.count)")
-                            .font(.system(size: 9.5, weight: .semibold, design: .monospaced))
-                            .foregroundStyle(.tertiary)
-                            .contentTransition(.numericText())
                         Spacer()
+                        if isWindow {
+                            Text("Select a macro to make it current")
+                                .font(.system(size: 10.5))
+                                .foregroundStyle(.tertiary)
+                        }
                     }
-                    .padding(.horizontal, 14)
-                    .padding(.top, 2)
-                    .padding(.bottom, 6)
+                    .padding(.horizontal, isWindow ? 24 : 16)
+                    .padding(.top, 1)
+                    .padding(.bottom, 12)
 
                     LazyVGrid(
                         columns: isWindow
-                            ? [GridItem(.adaptive(minimum: 225, maximum: 310), spacing: 8)]
-                            : [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)],
-                        spacing: 8
+                            ? [GridItem(.adaptive(minimum: 244), spacing: 14)]
+                            : [GridItem(.flexible())],
+                        alignment: .leading,
+                        spacing: 14
                     ) {
                         ForEach(filteredMacros) { macro in
                             let activePlayback = player.isPlaying && macro.id == controller.playingMacroID
@@ -406,8 +395,8 @@ struct PopoverContentView: View {
                             )
                         }
                     }
-                    .padding(.horizontal, 10)
-                    .padding(.bottom, 5)
+                    .padding(.horizontal, isWindow ? 24 : 16)
+                    .padding(.bottom, 20)
                 }
             }
 
@@ -431,12 +420,26 @@ struct PopoverContentView: View {
                 .onChange(of: state.statusMessage) { scheduleStatusClear() }
             }
 
-            if !isWindow {
+            if isWindow {
+                HStack(spacing: 6) {
+                    Image(systemName: "keyboard")
+                    Text("\(state.recordHotkey.name) Record")
+                    Text("·")
+                    Text("\(state.playHotkey.name) Play")
+                    Spacer()
+                    Text("\(state.stopHotkey.name) Stop")
+                }
+                .font(.system(size: 10.5))
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 24)
+                .frame(height: 34)
+                .overlay(Divider().opacity(0.5), alignment: .top)
+            } else {
                 Divider().opacity(0.5)
 
-                LibraryFooter(controller: controller, state: state)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 6)
+                LibraryFooter(controller: controller, state: state, compact: true)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
             }
         }
     }
@@ -526,20 +529,19 @@ private struct FilterChipRow: View {
                 Text(item.label)
                     .font(.system(size: 10.5, weight: selected ? .semibold : .medium))
             }
-            .foregroundStyle(selected ? AnyShapeStyle(.white) : AnyShapeStyle(.secondary))
+            .foregroundStyle(selected ? AnyShapeStyle(Brand.red500) : AnyShapeStyle(.secondary))
             .padding(.horizontal, 9)
             .padding(.vertical, 4.5)
             .background(
                 Capsule(style: .continuous)
-                    .fill(selected ? AnyShapeStyle(Brand.redGradient) : AnyShapeStyle(Color.primary.opacity(0.06)))
+                    .fill(selected ? Brand.red500.opacity(0.09) : Color.primary.opacity(0.035))
                     .overlay(
                         Capsule(style: .continuous)
-                            .strokeBorder(selected ? Color.white.opacity(0.18) : Color.primary.opacity(0.10), lineWidth: 0.5)
+                            .strokeBorder(selected ? Brand.red500.opacity(0.15) : Color.clear, lineWidth: 0.5)
                     )
             )
         }
         .buttonStyle(HoverPressButtonStyle())
-        .interactiveLift3D(intensity: 0.72, cornerRadius: 999)
         .accessibilityLabel("Filter: \(item.label)")
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
@@ -557,9 +559,22 @@ private struct LibrarySidebar: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 10) {
+                BrandMark(size: 30)
+                VStack(alignment: .leading, spacing: 3) {
+                    Wordmark(size: 14)
+                    Text("A little time, returned.")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 24)
+            .padding(.bottom, 28)
+
             ScrollView {
-                VStack(alignment: .leading, spacing: 4) {
-                    sectionHeader("MACROS")
+                VStack(alignment: .leading, spacing: 5) {
+                    sectionHeader("WORKSPACE")
                     ForEach(filterItems, id: \.self) { item in
                         sidebarRow(item)
                     }
@@ -572,26 +587,42 @@ private struct LibrarySidebar: View {
                         }
                     }
                 }
-                .padding(.horizontal, 10)
-                .padding(.top, 12)
+                .padding(.horizontal, 12)
+                .padding(.top, 0)
                 .padding(.bottom, 8)
             }
 
+            Button { controller.presentQuickRun() } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "keyboard")
+                    Text("Quick Run")
+                    Spacer()
+                    Text("⌘K").font(.system(size: 10, design: .monospaced))
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .font(.system(size: 10.5))
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 20)
+            .padding(.bottom, 14)
+            .help("Quick Run (⌘K)")
+
             Divider().opacity(0.45)
             LibraryFooter(controller: controller, state: state)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 5)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 12)
         }
-        .background(VisualEffectBackground(material: .sidebar, blendingMode: .behindWindow))
+        .background(Brand.sidebar)
     }
 
     private func sectionHeader(_ text: String) -> some View {
         Text(text)
-            .font(.system(size: 10, weight: .semibold))
-            .tracking(0.6)
+            .font(.system(size: 9, weight: .semibold))
+            .tracking(1.0)
             .foregroundStyle(.secondary)
             .padding(.horizontal, 5)
-            .padding(.bottom, 3)
+            .padding(.bottom, 7)
     }
 
     @ViewBuilder
@@ -603,26 +634,28 @@ private struct LibrarySidebar: View {
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: item.systemImage)
-                    .font(.system(size: 10.5, weight: .medium))
-                    .foregroundStyle(selected ? AnyShapeStyle(.white) : AnyShapeStyle(.secondary))
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(selected ? AnyShapeStyle(Brand.red500) : AnyShapeStyle(.secondary))
                     .frame(width: 16)
                 Text(item.label)
-                    .font(.system(size: 11.5, weight: selected ? .semibold : .medium))
-                    .foregroundStyle(selected ? AnyShapeStyle(.white) : AnyShapeStyle(.primary))
+                    .font(.system(size: 12, weight: selected ? .semibold : .regular))
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
                 Spacer()
                 Text("\(count)")
                     .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(selected ? AnyShapeStyle(.white.opacity(0.85)) : AnyShapeStyle(.secondary))
+                    .foregroundStyle(.secondary)
             }
             .padding(.horizontal, 8)
-            .padding(.vertical, 4)
+            .frame(height: 34)
             .background(
-                    RoundedRectangle(cornerRadius: 5, style: .continuous)
-                    .fill(selected ? Color.accentColor : Color.clear)
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(selected ? Brand.surface : Color.clear)
             )
+            .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(selected ? Brand.hairline : .clear))
         }
         .buttonStyle(.plain)
-        .interactiveLift3D(intensity: 0.62, cornerRadius: 6)
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }
 
@@ -634,167 +667,121 @@ private struct LibraryHeader: View {
     var searchFocused: FocusState<Bool>.Binding
     let isWindow: Bool
     let macroCount: Int
+    let title: String
     let onQuickRun: () -> Void
     @EnvironmentObject var recorder: Recorder
     @EnvironmentObject var player: Player
     @EnvironmentObject var state: AppState
 
     private var statusText: String {
-        if state.recordingCountdownActive { return "Preparing to record…" }
-        if recorder.isRecording { return "Recording…" }
-        if player.isPlaying     { return "Playing…" }
-        return "Idle · \(macroCount) macro\(macroCount == 1 ? "" : "s")"
+        if state.recordingCountdownActive { return "Get ready to capture your next routine." }
+        if recorder.isRecording { return "Recording your mouse and keyboard." }
+        if player.isPlaying { return "Your macro is running." }
+        return macroCount == 0 ? "Turn a routine into a single action." : "Less repetition. More time for everything else."
     }
 
     var body: some View {
-        VStack(spacing: 8) {
-            // Brand row (popover only — the window shows the wordmark in its titlebar)
-            if !isWindow {
-                HStack(spacing: 10) {
-                    BrandMark(size: 26)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Wordmark(size: 13)
-                        HStack(spacing: 5) {
-                            if recorder.isRecording { RecDot(size: 6) }
-                            Text(statusText)
-                                .font(.system(size: 10.5, weight: .medium))
-                                .foregroundStyle(.tertiary)
-                        }
-                    }
-                    Spacer(minLength: 0)
-                    Button { controller.showSettingsWindow() } label: {
-                        Image(systemName: "gearshape.fill")
-                            .font(.system(size: 12, weight: .medium))
+        VStack(alignment: .leading, spacing: isWindow ? 22 : 14) {
+            HStack(alignment: .center, spacing: 16) {
+                VStack(alignment: .leading, spacing: 6) {
+                    if isWindow {
+                        Text("LIBRARY")
+                            .font(.system(size: 9, weight: .semibold))
+                            .tracking(1.4)
                             .foregroundStyle(.secondary)
-                            .frame(width: 26, height: 26)
-                            .background(
-                                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                    .fill(Color.primary.opacity(0.06))
-                                    .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                        .strokeBorder(Color.primary.opacity(0.10), lineWidth: 0.5)))
-                    }
-                    .buttonStyle(HoverPressButtonStyle())
-                    .interactiveLift3D(intensity: 0.72, cornerRadius: 8)
-                    .accessibilityLabel("Settings")
-                }
-            }
-
-            if isWindow {
-                HStack(alignment: .center, spacing: 7) {
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text("Macros")
-                            .font(.system(size: 15, weight: .bold))
-                        HStack(spacing: 5) {
-                            if recorder.isRecording { RecDot(size: 6) }
-                            Text(statusText)
-                                .font(.system(size: 9.5, weight: .medium))
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
+                        Text(title)
+                            .font(.system(size: 26, weight: .semibold))
+                            .tracking(-0.8)
+                    } else {
+                        HStack(spacing: 8) {
+                            BrandMark(size: 24)
+                            Wordmark(size: 15)
                         }
                     }
-                    .fixedSize()
+                    if isWindow {
+                        Text(statusText)
+                            .font(.system(size: 11.5))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                    }
+                }
+                Spacer(minLength: 0)
+                recordButton
+            }
 
-                    Spacer(minLength: 4)
-                    quickRunButton
-                    searchField
-                        .frame(minWidth: 110, idealWidth: 190, maxWidth: 240)
-                        .layoutPriority(1)
-                    importButton
-                    playbackButton
-                    compactRecordButton
+            HStack(spacing: 8) {
+                searchField
+                    .layoutPriority(1)
+                Button(action: onQuickRun) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "bolt")
+                        if isWindow { Text("Quick Run") }
+                        Text("⌘K").foregroundStyle(.tertiary)
+                    }
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 10)
+                    .frame(height: 34)
+                    .background(Brand.surface, in: RoundedRectangle(cornerRadius: 8))
+                    .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Brand.hairline))
                 }
-            } else {
-                HStack(spacing: 7) {
-                    compactRecordButton
-                        .frame(maxWidth: .infinity)
-                    playbackButton
-                    quickRunButton
-                    importButton
+                .buttonStyle(HoverPressButtonStyle())
+                .fixedSize()
+                .disabled(recorder.isRecording || state.recordingCountdownActive)
+                .help("Quick Run (⌘K)")
+                .accessibilityLabel("Quick Run (⌘K)")
+
+                Button { controller.open() } label: {
+                    Image(systemName: "square.and.arrow.down")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 34, height: 34)
+                        .background(Brand.surface, in: RoundedRectangle(cornerRadius: 8))
+                        .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Brand.hairline))
                 }
-                HStack(spacing: 8) {
-                    searchField
+                .buttonStyle(HoverPressButtonStyle())
+                .help("Import macro (⌘O)")
+                .accessibilityLabel("Import macro (⌘O)")
+
+                if player.isPlaying {
+                    Button { controller.stopAll() } label: {
+                        Image(systemName: "stop.fill")
+                            .foregroundStyle(Brand.red500)
+                            .frame(width: 34, height: 34)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Stop playback")
+                    .accessibilityLabel("Stop playback")
                 }
             }
         }
     }
 
-    private var compactRecordButton: some View {
+    private var recordButton: some View {
         Button { controller.toggleRecording() } label: {
-            Label(
-                state.recordingCountdownActive ? "Cancel" : (recorder.isRecording ? "Stop" : "Record"),
-                systemImage: state.recordingCountdownActive
-                    ? "xmark"
-                    : (recorder.isRecording ? "stop.fill" : "record.circle")
-            )
-            .font(.system(size: 11.5, weight: .semibold))
-            .frame(minWidth: isWindow ? 70 : 100, maxWidth: isWindow ? 84 : .infinity)
+            HStack(spacing: 8) {
+                Image(systemName: state.recordingCountdownActive ? "xmark" : (recorder.isRecording ? "stop.fill" : "record.circle"))
+                    .font(.system(size: 14, weight: .semibold))
+                Text(state.recordingCountdownActive ? "Cancel" : (recorder.isRecording ? "Stop & save" : (isWindow ? "New recording" : "Record")))
+                    .font(.system(size: 12, weight: .semibold))
+                if isWindow {
+                    Text(state.recordHotkey.name)
+                        .font(.system(size: 10, weight: .medium, design: .monospaced))
+                        .foregroundStyle(.white.opacity(0.75))
+                        .padding(.leading, 4)
+                }
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, isWindow ? 15 : 12)
+            .frame(height: 38)
+            .background(Brand.red500, in: RoundedRectangle(cornerRadius: 9))
+            .overlay(RoundedRectangle(cornerRadius: 9).strokeBorder(.white.opacity(0.12)))
+            .shadow(color: Brand.red700.opacity(0.18), radius: 5, y: 2)
         }
-        .buttonStyle(.borderedProminent)
-        .controlSize(.regular)
-        .tint(Brand.red500)
-        .help(recordControlHelp)
+        .buttonStyle(HoverPressButtonStyle(pressScale: 0.98))
+        .fixedSize()
+        .help("\(recordControlLabel) (\(state.recordHotkey.name))")
         .accessibilityLabel(recordControlLabel)
-        .interactiveLift3D(intensity: 0.86, cornerRadius: 8)
-    }
-
-    private var playbackButton: some View {
-        headerIconButton(
-            systemImage: player.isPlaying ? "stop.fill" : "play.fill",
-            tint: player.isPlaying ? Brand.red500 : Brand.sigGreen,
-            help: player.isPlaying ? "Stop playback (\(state.stopHotkey.name))" : "Play current macro (\(state.playHotkey.name))",
-            disabled: !player.isPlaying && (recorder.events.isEmpty || recorder.isRecording || state.recordingCountdownActive)
-        ) {
-            if player.isPlaying { controller.stopAll() }
-            else { controller.play() }
-        }
-    }
-
-    private var importButton: some View {
-        headerIconButton(
-            systemImage: "square.and.arrow.down",
-            tint: Brand.sigBlue,
-            help: "Import macro (⌘O)"
-        ) {
-            controller.open()
-        }
-    }
-
-    private var quickRunButton: some View {
-        headerIconButton(
-            systemImage: "bolt.fill",
-            tint: Brand.sigViolet,
-            help: recorder.isRecording || state.recordingCountdownActive
-                ? "Quick Run is unavailable during recording"
-                : "Quick Run (⌘K)",
-            disabled: recorder.isRecording || state.recordingCountdownActive,
-            action: onQuickRun
-        )
-    }
-
-    private func headerIconButton(
-        systemImage: String,
-        tint: Color,
-        help: String,
-        disabled: Bool = false,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            Image(systemName: systemImage)
-                .font(.system(size: 11, weight: .bold))
-                .foregroundStyle(tint)
-                .frame(width: 28, height: 26)
-                .background(
-                    RoundedRectangle(cornerRadius: 7, style: .continuous)
-                        .fill(tint.opacity(0.11))
-                        .overlay(RoundedRectangle(cornerRadius: 7, style: .continuous)
-                            .strokeBorder(tint.opacity(0.22), lineWidth: 0.5))
-                )
-        }
-        .buttonStyle(HoverPressButtonStyle())
-        .interactiveLift3D(intensity: 0.86, cornerRadius: 7)
-        .disabled(disabled)
-        .help(help)
-        .accessibilityLabel(help)
     }
 
     private var recordControlLabel: String {
@@ -802,43 +789,33 @@ private struct LibraryHeader: View {
         return recorder.isRecording ? "Stop recording" : "Start recording"
     }
 
-    private var recordControlHelp: String {
-        let action = state.recordingCountdownActive
-            ? "Cancel countdown"
-            : (recorder.isRecording ? "Stop recording" : "Start recording")
-        return "\(action) (\(state.recordHotkey.name))"
-    }
-
     private var searchField: some View {
         HStack(spacing: 8) {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(.secondary)
-            TextField("Search macros", text: $search)
+            TextField("Search your macros", text: $search)
                 .textFieldStyle(.plain)
                 .font(.system(size: 12))
                 .focused(searchFocused)
+                .accessibilityLabel("Search macros")
             if search.isEmpty {
-                KeyCapView(text: "⌘F", size: .sm)
+                Text("⌘F")
+                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                    .foregroundStyle(.tertiary)
             } else {
                 Button { search = "" } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Clear search")
             }
         }
-        .padding(.horizontal, 10)
-        .frame(height: 28)
-        .background(
-            RoundedRectangle(cornerRadius: isWindow ? 8 : 12, style: .continuous)
-                .fill(Color.primary.opacity(0.06))
-                .overlay(RoundedRectangle(cornerRadius: isWindow ? 8 : 12, style: .continuous)
-                    .strokeBorder(Color.primary.opacity(0.10), lineWidth: 0.5))
-        )
-        .interactiveLift3D(intensity: 0.34, cornerRadius: isWindow ? 8 : 12)
+        .padding(.horizontal, 11)
+        .frame(height: 34)
+        .background(Brand.surface, in: RoundedRectangle(cornerRadius: 8))
+        .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(searchFocused.wrappedValue ? Brand.red500.opacity(0.5) : Brand.hairline))
     }
 }
 
@@ -964,8 +941,8 @@ private struct MacroCard: View {
 
     private var strokeColor: Color {
         if isPlaying { return cardAccentColor(for: macro.accent).opacity(0.95) }
-        if isCurrent { return cardAccentColor(for: macro.accent).opacity(0.55) }
         if isSelected { return Brand.sigBlue.opacity(0.85) }
+        if isCurrent { return cardAccentColor(for: macro.accent).opacity(0.45) }
         if dragOver { return Color.accentColor.opacity(0.6) }
         return Color.primary.opacity(0.10)
     }
@@ -973,7 +950,6 @@ private struct MacroCard: View {
     var body: some View {
         styledCard
             .onHover { hovered = $0 }
-            .interactiveLift3D(intensity: 0.72, cornerRadius: 12)
             .onTapGesture {
                 let mods = NSApp.currentEvent?.modifierFlags ?? []
                 onSelect(mods)
@@ -1034,12 +1010,12 @@ private struct MacroCard: View {
 
     private var styledCard: some View {
         cardContent
-            .padding(10)
-            .frame(height: macro.tags.isEmpty ? 92 : 112)
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
             .background { cardBackground }
             .overlay(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .strokeBorder(strokeColor, lineWidth: (isPlaying || isCurrent || isSelected) ? 1.2 : 0.5)
+                    .strokeBorder(strokeColor, lineWidth: (isPlaying || isCurrent || isSelected) ? 1 : 0.5)
             )
             .overlay(alignment: .bottomLeading) {
                 if isPlaying {
@@ -1065,9 +1041,9 @@ private struct MacroCard: View {
                     .strokeBorder(Color.accentColor.opacity(cardFocused ? 0.9 : 0), lineWidth: 2.5)
             )
             .shadow(
-                color: .black.opacity(hovered ? 0.13 : 0.055),
-                radius: hovered ? 5 : 2,
-                y: hovered ? 2 : 1
+                color: .black.opacity(hovered ? 0.10 : 0.035),
+                radius: hovered ? 8 : 3,
+                y: 2
             )
             .animation(.spring(response: 0.25, dampingFraction: 0.85), value: hovered)
             .animation(Brand.spring, value: isCurrent)
@@ -1086,8 +1062,8 @@ private struct MacroCard: View {
         let shape = RoundedRectangle(cornerRadius: 12, style: .continuous)
         let tint = cardAccentColor(for: macro.accent)
         ZStack {
-            shape.fill(Color(nsColor: .controlBackgroundColor))
-            shape.fill(tint.opacity(isPlaying ? 0.10 : (isCurrent ? 0.055 : (isSelected ? 0.10 : 0))))
+            shape.fill(Brand.surface)
+            shape.fill(isSelected ? Brand.sigBlue.opacity(0.07) : tint.opacity(isPlaying ? 0.04 : 0))
         }
     }
 
@@ -1120,144 +1096,111 @@ private struct MacroCard: View {
     }
 
     private var cardContent: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            // Title row
-            HStack(spacing: 6) {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 10) {
                 MacroIconView(macro: macro, onSetIcon: onSetIcon)
-
-                if isRenaming {
-                    TextField("Name", text: $renameText, onCommit: onCommitRename)
-                        .textFieldStyle(.plain)
-                        .font(.system(size: 12, weight: .semibold))
-                        .padding(.horizontal, 5)
-                        .padding(.vertical, 3)
-                        .background(
-                            RoundedRectangle(cornerRadius: 5, style: .continuous)
-                                .fill(Color.primary.opacity(0.08))
-                        )
-                        .focused($renameFocused)
-                        .onAppear { renameFocused = true }
-                } else {
-                    Text(macro.name)
-                        .font(.system(size: 11.5, weight: .semibold))
-                        .foregroundStyle(.primary)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                }
-
-                Spacer(minLength: 0)
-
-                if !macro.notes.isEmpty {
-                    Button(action: onOpenNotes) {
-                        Image(systemName: "text.alignleft")
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 4) {
+                    if isRenaming {
+                        TextField("Name", text: $renameText, onCommit: onCommitRename)
+                            .textFieldStyle(.plain)
+                            .font(.system(size: 13, weight: .semibold))
+                            .padding(4)
+                            .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 4))
+                            .focused($renameFocused)
+                            .onAppear { renameFocused = true }
+                    } else {
+                        Text(macro.name)
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(.primary)
+                            .lineLimit(1)
                     }
-                    .buttonStyle(.plain)
-                    .help("Has notes — click to open")
-                    .interactiveLift3D(intensity: 0.38, cornerRadius: 5)
+                    Text(isPlaying ? "Playing now" : (isCurrent ? "Current macro" : "Edited \(RelativeTime.string(from: macro.modifiedAt))"))
+                        .font(.system(size: 10.5))
+                        .foregroundStyle(isPlaying ? AnyShapeStyle(Brand.red500) : AnyShapeStyle(.secondary))
                 }
-
-                if let hk = macro.hotkey {
-                    Button(action: onAssignHotkey) {
-                        KeyCapView(text: hk.name)
-                    }
-                    .buttonStyle(.plain)
-                    .help("Hotkey: \(hk.name) — click to change")
-                    .interactiveLift3D(intensity: 0.38, cornerRadius: 5)
-                }
+                .frame(maxWidth: .infinity, alignment: .leading)
 
                 Button(action: onToggleFavorite) {
                     Image(systemName: macro.favorite ? "star.fill" : "star")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(macro.favorite ? AnyShapeStyle(.yellow) : AnyShapeStyle(.tertiary))
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(macro.favorite ? AnyShapeStyle(Brand.sigAmber) : AnyShapeStyle(.tertiary))
+                        .frame(width: 24, height: 24)
                 }
                 .buttonStyle(.plain)
-                .help(macro.favorite ? "Unstar" : "Star")
+                .help(macro.favorite ? "Remove favorite" : "Add favorite")
                 .accessibilityLabel(macro.favorite ? "Remove favorite" : "Add favorite")
-                .interactiveLift3D(intensity: 0.38, cornerRadius: 5)
             }
 
-            // Tiny waveform
             MiniWaveform(
                 events: macro.events,
                 progress: isPlaying ? playProgress : nil,
                 progressTint: cardAccentColor(for: macro.accent)
             )
-                .frame(height: 16)
+            .frame(height: 26)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .background(Color.primary.opacity(0.025), in: RoundedRectangle(cornerRadius: 6))
+            .accessibilityHidden(true)
 
-            // Tags row (if any)
+            HStack(spacing: 6) {
+                metaRow
+                Spacer(minLength: 4)
+                Text("\(macro.eventCount) events")
+                    .font(.system(size: 10.5))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                if let hk = macro.hotkey {
+                    Button(action: onAssignHotkey) { KeyCapView(text: hk.name, size: .sm) }
+                        .buttonStyle(.plain)
+                        .help("Change hotkey")
+                }
+            }
+
             if !macro.tags.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 4) {
-                        ForEach(macro.tags, id: \.self) { t in
-                            Text(t)
-                                .font(.system(size: 9, weight: .semibold))
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(
-                                    Capsule(style: .continuous)
-                                        .fill(Color.accentColor.opacity(0.18))
-                                )
-                                .foregroundStyle(.primary)
+                    HStack(spacing: 5) {
+                        ForEach(macro.tags, id: \.self) { tag in
+                            Text(tag)
+                                .font(.system(size: 9.5, weight: .medium))
+                                .foregroundStyle(.secondary)
+                                .padding(.horizontal, 7)
+                                .padding(.vertical, 3)
+                                .background(Color.primary.opacity(0.05), in: Capsule())
                         }
                     }
                 }
-                .frame(height: 16)
+                .frame(height: 20)
             }
 
-            // Bottom row: meta + actions. These controls live INSIDE a content
-            // card, so they stay plain (no glass) — glass is reserved for the
-            // floating control layer.
-            HStack(spacing: 4) {
-                metaRow
-                Spacer()
-                CardActionButton(
-                    systemImage: isPlaying ? "stop.fill" : "play.fill",
-                    tint: isPlaying ? Brand.red500 : Brand.sigGreen,
-                    label: isPlaying ? "Stop \(macro.name)" : "Play \(macro.name)"
-                ) { onPlay() }
-                    .help(isPlaying ? "Stop" : "Play")
+            Divider().opacity(0.55)
+
+            HStack(spacing: 8) {
+                Button(action: onPlay) {
+                    Label(isPlaying ? "Stop" : "Play", systemImage: isPlaying ? "stop.fill" : "play.fill")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(isPlaying ? AnyShapeStyle(Brand.red500) : AnyShapeStyle(.primary))
+                        .padding(.horizontal, 11)
+                        .frame(height: 28)
+                        .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 6))
+                }
+                .buttonStyle(HoverPressButtonStyle(pressScale: 0.98))
+                .help(isPlaying ? "Stop playback" : "Play this macro")
+
                 LoopChip(loops: macro.loops, onChange: onSetLoops)
-                CardActionButton(systemImage: "slider.horizontal.below.rectangle", tint: .blue, label: "Edit \(macro.name)") { onEdit() }
-                    .help("Edit")
-                Menu {
-                    Button("Rename…") { onStartRename() }
-                    Button(macro.favorite ? "Unfavorite" : "Favorite") { onToggleFavorite() }
-                    Divider()
-                    Button("Notes…") { onOpenNotes() }
-                    Button("Add Tag…") { onAddTag() }
-                    Button("Assign Hotkey…") { onAssignHotkey() }
-                    if macro.hotkey != nil {
-                        Button("Clear Hotkey") { onClearHotkey() }
-                    }
-                    Divider()
-                    speedSubmenu()
-                    colorSubmenu()
-                    chainSubmenu()
-                    Divider()
-                    Button("Duplicate") { onDuplicate() }
-                    Menu("Export") {
-                        Button("As TinyRecorder File…") { onExport() }
-                        Button("As Text…") { onExportText() }
-                    }
-                    Divider()
-                    Button("Delete", role: .destructive) { confirmDelete = true }
-                } label: {
+                Spacer(minLength: 0)
+                CardActionButton(systemImage: "slider.horizontal.3", tint: .primary, label: "Edit \(macro.name)") { onEdit() }
+                    .help("Edit macro")
+                Menu { cardMenuItems } label: {
                     Image(systemName: "ellipsis")
-                        .font(.system(size: 9, weight: .bold))
+                        .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(.secondary)
-                        .frame(width: 20, height: 17)
-                        .background(
-                            RoundedRectangle(cornerRadius: 5, style: .continuous)
-                                .fill(Color.primary.opacity(0.05))
-                        )
+                        .frame(width: 28, height: 28)
+                        .contentShape(Rectangle())
                 }
                 .menuStyle(.borderlessButton)
                 .menuIndicator(.hidden)
-                .frame(width: 20, height: 17)
+                .frame(width: 28, height: 28)
                 .accessibilityLabel("More actions")
-                .interactiveLift3D(intensity: 0.46, cornerRadius: 5)
             }
         }
     }
@@ -1287,7 +1230,7 @@ private struct MacroCard: View {
                     .contentTransition(.numericText())
             } else {
                 Text(durationText)
-                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                    .font(.system(size: 11, weight: .medium, design: .monospaced))
                     .foregroundStyle(.secondary)
             }
             if abs(macro.speed - 1.0) > 0.01 {
@@ -1425,27 +1368,19 @@ private struct MacroIconView: View {
             Button("Reset", role: .destructive) { onSetIcon(nil) }
         } label: {
             ZStack {
-                RoundedRectangle(cornerRadius: 5, style: .continuous)
-                    .fill(LinearGradient(
-                        colors: [tint.opacity(0.95), tint.opacity(0.65)],
-                        startPoint: .topLeading, endPoint: .bottomTrailing
-                    ))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 5, style: .continuous)
-                            .strokeBorder(.white.opacity(0.18), lineWidth: 0.5)
-                    )
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    .fill(tint.opacity(0.09))
                 Image(systemName: macro.icon ?? "wave.3.right")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(.white)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(tint)
             }
-            .frame(width: 20, height: 20)
+            .frame(width: 36, height: 36)
         }
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
-        .frame(width: 20, height: 20)
+        .frame(width: 36, height: 36)
         .help("Change icon")
         .accessibilityLabel("Change icon")
-        .interactiveLift3D(intensity: 0.45, cornerRadius: 5)
     }
 }
 
@@ -1459,18 +1394,17 @@ private struct CardActionButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: systemImage)
-                .font(.system(size: 9, weight: .bold))
+                .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(hovered ? AnyShapeStyle(tint) : AnyShapeStyle(Color.secondary))
-                .frame(width: 20, height: 17)
+                .frame(width: 28, height: 28)
                 .background(
                     RoundedRectangle(cornerRadius: 5, style: .continuous)
-                        .fill(Color.primary.opacity(hovered ? 0.10 : 0.05))
+                        .fill(Color.primary.opacity(hovered ? 0.08 : 0))
                 )
         }
         .buttonStyle(.plain)
         .onHover { hovered = $0 }
         .accessibilityLabel(label.isEmpty ? systemImage : label)
-        .interactiveLift3D(intensity: 0.48, cornerRadius: 5)
     }
 }
 
@@ -1555,38 +1489,39 @@ private struct EmptyState: View {
     let hasSearch: Bool
     let countdownSeconds: Int
     let onPrimaryAction: () -> Void
-    @State private var bounce = false
 
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 12) {
             ZStack {
                 Circle()
-                    .fill(Color.primary.opacity(0.04))
-                    .frame(width: 64, height: 64)
+                    .fill(Brand.red500.opacity(0.06))
+                    .frame(width: 68, height: 68)
                 Image(systemName: hasSearch ? "magnifyingglass" : (filter == .favorites ? "star" : "tray"))
                     .font(.system(size: 25, weight: .light))
-                    .foregroundStyle(.tertiary)
-                    .scaleEffect(bounce ? 1.0 : 0.8)
-                    .animation(.spring(response: 0.6, dampingFraction: 0.55), value: bounce)
+                    .foregroundStyle(Brand.red500.opacity(0.75))
             }
             Text(title)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(.secondary)
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(.primary)
             Text(subtitle)
-                .font(.system(size: 11))
-                .foregroundStyle(.tertiary)
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 280)
 
-            Button(primaryActionTitle, action: onPrimaryAction)
-                .buttonStyle(.borderedProminent)
-                .controlSize(.regular)
-                .tint(filter == .all && !hasSearch ? Brand.red500 : Color.accentColor)
-                .padding(.top, 2)
-                .interactiveLift3D(intensity: 0.72, cornerRadius: 8)
+            Button(action: onPrimaryAction) {
+                Text(primaryActionTitle)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(filter == .all && !hasSearch ? AnyShapeStyle(.white) : AnyShapeStyle(.primary))
+                    .padding(.horizontal, 14)
+                    .frame(height: 34)
+                    .background(filter == .all && !hasSearch ? Brand.red500 : Brand.surface, in: RoundedRectangle(cornerRadius: 8))
+                    .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Brand.hairline))
+            }
+            .buttonStyle(HoverPressButtonStyle())
+            .padding(.top, 2)
         }
         .padding(24)
-        .onAppear { bounce = true }
     }
 
     private var title: String {
@@ -1597,7 +1532,7 @@ private struct EmptyState: View {
         case .mostPlayed: return "No playback history"
         case .withHotkey: return "No macros with hotkeys"
         case .tag(let t): return "No macros tagged \(t)"
-        case .all:        return "No macros yet"
+        case .all:        return "Your next routine, on repeat."
         }
     }
 
@@ -1625,8 +1560,20 @@ private struct EmptyState: View {
 private struct LibraryFooter: View {
     let controller: MenuBarController
     @ObservedObject var state: AppState
+    var compact = false
 
     var body: some View {
+        if compact {
+            HStack(spacing: 16) {
+                Button("Library", systemImage: "sidebar.left") { controller.showMainWindow() }
+                Button("Editor", systemImage: "slider.horizontal.3") { controller.openEditor() }
+                Spacer()
+                Button("Settings", systemImage: "gearshape") { controller.showSettingsWindow() }
+            }
+            .font(.system(size: 11, weight: .medium))
+            .foregroundStyle(.secondary)
+            .buttonStyle(.plain)
+        } else {
         VStack(spacing: 0) {
             FooterRow(
                 icon: "plus",
@@ -1646,6 +1593,7 @@ private struct LibraryFooter: View {
                 rightAccessory: AnyView(KeyCapView(text: "⌘,", size: .sm)),
                 action: { controller.showSettingsWindow() }
             )
+        }
         }
     }
 }
@@ -1672,7 +1620,7 @@ private struct FooterRow: View {
                 if let r = rightAccessory { r }
             }
             .padding(.horizontal, 8)
-            .padding(.vertical, 4.5)
+            .padding(.vertical, 7)
             .background(
                 RoundedRectangle(cornerRadius: 6, style: .continuous)
                     .fill(Color.primary.opacity(hovered ? 0.06 : 0))
@@ -1680,7 +1628,6 @@ private struct FooterRow: View {
         }
         .buttonStyle(.plain)
         .onHover { hovered = $0 }
-        .interactiveLift3D(intensity: 0.58, cornerRadius: 6)
     }
 }
 
@@ -1762,16 +1709,16 @@ struct LoopChip: View {
                 showCustom = true
             }
         } label: {
-            HStack(spacing: 2) {
+            HStack(spacing: 4) {
                 Image(systemName: loops <= 0 ? "infinity" : "repeat")
-                    .font(.system(size: 8, weight: .black))
+                    .font(.system(size: 10, weight: .medium))
                 Text(loops <= 0 ? "∞" : "\(loops)×")
-                    .font(.system(size: 9.5, weight: .semibold, design: .monospaced))
+                    .font(.system(size: 10.5, weight: .medium, design: .monospaced))
             }
             .foregroundStyle(hovered ? AnyShapeStyle(.primary) : AnyShapeStyle(.secondary))
             .frame(minWidth: 24)
-            .padding(.horizontal, 4)
-            .padding(.vertical, 3)
+            .padding(.horizontal, 6)
+            .frame(height: 28)
             .background(
                 RoundedRectangle(cornerRadius: 5, style: .continuous)
                     .fill(Color.primary.opacity(hovered ? 0.10 : 0.05))
@@ -1783,7 +1730,6 @@ struct LoopChip: View {
         .help(loops <= 0 ? "Repeats continuously" : (loops == 1 ? "Plays once" : "Repeats \(loops) times"))
         .accessibilityLabel(loops <= 0 ? "Repeat: continuous" : "Repeat: \(loops) times")
         .onHover { hovered = $0 }
-        .interactiveLift3D(intensity: 0.45, cornerRadius: 5)
         .alert("Custom repeat count", isPresented: $showCustom) {
             TextField("e.g. 42", text: $customText)
             Button("Cancel", role: .cancel) {}
@@ -2128,6 +2074,10 @@ struct SettingsPanel: View {
                 get: { state.playHotkey },
                 set: { state.playHotkey = $0; controller.reapplyHotkeys() }
             ))
+            Text("Control shortcut keystrokes are excluded from recordings. Other input is still recorded while a hotkey is held.")
+                .font(.system(size: 10))
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -2223,6 +2173,10 @@ struct SettingsPanel: View {
             Text("Prevents recorded coordinates from clicking TinyRecorder's own windows.")
                 .font(.system(size: 10))
                 .foregroundStyle(.tertiary)
+                .fixedSize(horizontal: false, vertical: true)
+            Label("Move the mouse, click, scroll, or press a key to stop playback.", systemImage: "hand.raised")
+                .font(.system(size: 10))
+                .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }

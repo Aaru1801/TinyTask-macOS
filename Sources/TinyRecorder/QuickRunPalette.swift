@@ -1,7 +1,7 @@
 import SwiftUI
 import AppKit
 
-/// Spotlight-inspired command deck for launching macros and common actions
+/// Keyboard-first search for launching macros and common actions
 /// without leaving the keyboard. It deliberately floats above both the compact
 /// popover and full library so the interaction model stays identical everywhere.
 struct QuickRunPalette: View {
@@ -40,37 +40,28 @@ struct QuickRunPalette: View {
 
     var body: some View {
         ZStack {
-            Color.black.opacity(0.20)
+            Color.black.opacity(0.16)
                 .ignoresSafeArea()
                 .contentShape(Rectangle())
                 .onTapGesture(perform: onDismiss)
 
             VStack(spacing: 0) {
                 searchHeader
-                Divider().opacity(0.45)
+                Divider()
                 resultsList
-                Divider().opacity(0.45)
+                Divider()
                 keyboardFooter
             }
-            .frame(maxWidth: compact ? 370 : 500)
+            .frame(maxWidth: compact ? 370 : 520)
             .background(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(.ultraThinMaterial)
+                    .fill(Color(nsColor: .windowBackgroundColor))
                     .overlay(
                         RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .fill(LinearGradient(
-                                colors: [Color.white.opacity(0.075), .clear, Brand.sigViolet.opacity(0.035)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ))
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .strokeBorder(Color.white.opacity(0.16), lineWidth: 0.65)
+                            .strokeBorder(Color.primary.opacity(0.10), lineWidth: 0.5)
                     )
             )
-            .shadow(color: .black.opacity(0.30), radius: 28, y: 14)
-            .interactiveLift3D(intensity: 0.14, cornerRadius: 16)
+            .shadow(color: .black.opacity(0.20), radius: 24, y: 10)
             .padding(.horizontal, compact ? 14 : 24)
         }
         .onAppear {
@@ -89,24 +80,16 @@ struct QuickRunPalette: View {
     }
 
     private var searchHeader: some View {
-        HStack(spacing: 11) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(LinearGradient(
-                        colors: [Brand.sigViolet, Brand.sigBlue],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ))
-                    .shadow(color: Brand.sigViolet.opacity(0.28), radius: 5, y: 2)
-                Image(systemName: "bolt.fill")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(.white)
-            }
-            .frame(width: 28, height: 28)
+        HStack(spacing: 12) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 17, weight: .medium))
+                .foregroundStyle(.secondary)
+                .frame(width: 22)
+                .accessibilityHidden(true)
 
-            TextField("Run a macro or command", text: $query)
+            TextField("Search macros and commands", text: $query)
                 .textFieldStyle(.plain)
-                .font(.system(size: compact ? 13 : 14, weight: .medium))
+                .font(.system(size: compact ? 14 : 15))
                 .focused($queryFocused)
                 .onSubmit(activateSelected)
                 .onMoveCommand { direction in
@@ -117,9 +100,7 @@ struct QuickRunPalette: View {
                     }
                 }
 
-            if query.isEmpty {
-                KeyCapView(text: "⌘K", size: .sm)
-            } else {
+            if !query.isEmpty {
                 Button { query = "" } label: {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 13))
@@ -131,29 +112,33 @@ struct QuickRunPalette: View {
 
             KeyCapView(text: "esc", size: .sm)
         }
-        .padding(.horizontal, 14)
-        .frame(height: 52)
+        .padding(.horizontal, 16)
+        .frame(height: compact ? 56 : 62)
     }
 
     @ViewBuilder
     private var resultsList: some View {
         if entries.isEmpty {
-            VStack(spacing: 7) {
-                Image(systemName: "sparkle.magnifyingglass")
-                    .font(.system(size: 19, weight: .semibold))
-                    .foregroundStyle(Brand.sigViolet)
+            VStack(spacing: 8) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 24, weight: .regular))
+                    .foregroundStyle(.tertiary)
+                    .padding(.bottom, 4)
                 Text("No match for “\(query)”")
-                    .font(.system(size: 11.5, weight: .semibold))
+                    .font(.system(size: 13, weight: .semibold))
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
                 Text("Try a macro name, tag, or command.")
-                    .font(.system(size: 10.5))
+                    .font(.system(size: 12))
                     .foregroundStyle(.secondary)
             }
+            .padding(.horizontal, 20)
             .frame(maxWidth: .infinity)
-            .frame(height: 126)
+            .frame(height: 160)
         } else {
             ScrollViewReader { proxy in
                 ScrollView {
-                    LazyVStack(spacing: 3) {
+                    LazyVStack(spacing: 4) {
                         ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
                             resultRow(entry, selected: index == selectedIndex)
                                 .id(entry.id)
@@ -162,7 +147,7 @@ struct QuickRunPalette: View {
                                 }
                         }
                     }
-                    .padding(6)
+                    .padding(8)
                 }
                 .frame(maxHeight: compact ? 292 : 336)
                 .onChange(of: selectedIndex) { _, index in
@@ -177,56 +162,51 @@ struct QuickRunPalette: View {
 
     private func resultRow(_ entry: Entry, selected: Bool) -> some View {
         Button { activate(entry) } label: {
-            HStack(spacing: 10) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 7, style: .continuous)
-                        .fill(entry.tint.opacity(selected ? 0.20 : 0.11))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 7, style: .continuous)
-                                .strokeBorder(entry.tint.opacity(selected ? 0.40 : 0.18), lineWidth: 0.5)
-                        )
-                    Image(systemName: entry.symbol)
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(entry.tint)
-                }
-                .frame(width: 29, height: 29)
+            HStack(spacing: 12) {
+                Image(systemName: entry.symbol)
+                    .font(.system(size: 17, weight: .medium))
+                    .foregroundStyle(entry.tint)
+                    .frame(width: 26, height: 28)
+                    .accessibilityHidden(true)
 
-                VStack(alignment: .leading, spacing: 1) {
+                VStack(alignment: .leading, spacing: 3) {
                     Text(entry.title)
-                        .font(.system(size: 11.5, weight: .semibold))
+                        .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(.primary)
                         .lineLimit(1)
                     Text(entry.subtitle)
-                        .font(.system(size: 9.5, weight: .medium))
+                        .font(.system(size: 11))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
 
-                Spacer(minLength: 8)
+                Spacer(minLength: 4)
                 if let trailing = entry.trailing {
                     Text(trailing)
-                        .font(.system(size: 9, weight: .semibold, design: .monospaced))
-                        .foregroundStyle(.tertiary)
+                        .font(.system(size: 10, weight: .medium, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                        .fixedSize()
                 }
-                if selected {
-                    KeyCapView(text: "↵", size: .sm)
-                        .transition(.scale.combined(with: .opacity))
-                }
+                Image(systemName: "return")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 14)
+                    .opacity(selected ? 1 : 0)
+                    .accessibilityHidden(true)
             }
-            .padding(.horizontal, 9)
-            .frame(height: 44)
+            .padding(.horizontal, 12)
+            .frame(height: compact ? 52 : 56)
             .background(
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(selected ? entry.tint.opacity(0.105) : Color.clear)
+                    .fill(selected ? Color.primary.opacity(0.08) : Color.clear)
                     .overlay(
                         RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .strokeBorder(entry.tint.opacity(selected ? 0.22 : 0), lineWidth: 0.6)
+                            .strokeBorder(Color.primary.opacity(selected ? 0.08 : 0), lineWidth: 0.5)
                     )
             )
             .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         }
         .buttonStyle(.plain)
-        .interactiveLift3D(intensity: selected ? 0.32 : 0.18, cornerRadius: 10)
         .accessibilityLabel(
             "\(entry.title), \(entry.subtitle)" +
                 (entry.trailing.map { ", \($0)" } ?? "")
@@ -236,24 +216,23 @@ struct QuickRunPalette: View {
 
     private var keyboardFooter: some View {
         HStack(spacing: 12) {
-            keyboardHint("↑↓", "navigate")
-            keyboardHint("↵", "run")
+            keyboardHint("↑↓", "Navigate")
+            keyboardHint("↵", "Run")
             Spacer()
-            Text(query.isEmpty ? "RECENT + FAVORITES" : "BEST MATCHES")
-                .font(.system(size: 8.5, weight: .bold, design: .monospaced))
-                .tracking(0.7)
-                .foregroundStyle(.tertiary)
+            Text(query.isEmpty ? "Recent & favorites" : "Search results")
+                .font(.system(size: 10))
+                .foregroundStyle(.secondary)
         }
-        .padding(.horizontal, 13)
-        .frame(height: 34)
+        .padding(.horizontal, 16)
+        .frame(height: 38)
     }
 
     private func keyboardHint(_ key: String, _ label: String) -> some View {
         HStack(spacing: 4) {
             KeyCapView(text: key, size: .sm)
             Text(label)
-                .font(.system(size: 9, weight: .medium))
-                .foregroundStyle(.tertiary)
+                .font(.system(size: 10))
+                .foregroundStyle(.secondary)
         }
     }
 
@@ -319,7 +298,7 @@ struct QuickRunPalette: View {
                 title: "Import Macro…",
                 subtitle: "TinyRecorder, TinyTask, JSON, or text",
                 symbol: "square.and.arrow.down",
-                tint: Brand.sigBlue,
+                tint: .secondary,
                 action: .importFile,
                 trailing: "⌘O"
             ),
@@ -330,7 +309,7 @@ struct QuickRunPalette: View {
                 title: player.isPlaying ? "Stop Playback" : "Play Current Macro",
                 subtitle: library.currentMacro?.name ?? "Replay the current event buffer",
                 symbol: player.isPlaying ? "stop.fill" : "play.fill",
-                tint: player.isPlaying ? Brand.red500 : Brand.sigGreen,
+                tint: player.isPlaying ? Brand.red500 : .secondary,
                 action: .play,
                 trailing: player.isPlaying ? state.stopHotkey.name : state.playHotkey.name
             ), at: 1)
@@ -341,7 +320,7 @@ struct QuickRunPalette: View {
                 title: "Open Current in Editor",
                 subtitle: library.currentMacro?.name ?? "Current macro",
                 symbol: "slider.horizontal.below.rectangle",
-                tint: Brand.sigAmber,
+                tint: .secondary,
                 action: .edit,
                 trailing: "⌥⌘E"
             ))
@@ -351,7 +330,7 @@ struct QuickRunPalette: View {
             title: "Settings…",
             subtitle: "Hotkeys, capture, playback, and appearance",
             symbol: "gearshape.fill",
-            tint: Brand.sigViolet,
+            tint: .secondary,
             action: .settings,
             trailing: "⌘,"
         ))

@@ -27,18 +27,17 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
 
         let win = NSWindow(contentViewController: host)
         win.title = "TinyRecorder"
-        win.setContentSize(NSSize(width: 720, height: 460))
+        win.setContentSize(NSSize(width: 920, height: 600))
         win.styleMask = [.titled, .closable, .resizable, .miniaturizable, .fullSizeContentView]
-        win.minSize = NSSize(width: 620, height: 390)
+        win.minSize = NSSize(width: 760, height: 500)
         win.isReleasedWhenClosed = false
         win.titlebarAppearsTransparent = true
         win.titleVisibility = .hidden
         win.toolbarStyle = .unified
         win.backgroundColor = .clear
         win.isMovableByWindowBackground = true
-        // New autosave key intentionally resets the former dashboard-sized frame
-        // to this compact utility footprint on first launch of the redesign.
-        restoreFrameOrCenter(win, name: "TinyRecorder.MainWindow.CompactV2")
+        // Give the refreshed workspace room on first launch, then retain resizes.
+        restoreFrameOrCenter(win, name: "TinyRecorder.MainWindow.WorkspaceV3")
         super.init(window: win)
         win.delegate = self
     }

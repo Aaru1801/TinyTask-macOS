@@ -27,7 +27,7 @@ final class RecordingHUDController {
         window?.alphaValue = 0
         window?.orderFrontRegardless()
         NSAnimationContext.runAnimationGroup { ctx in
-            ctx.duration = 0.18
+            ctx.duration = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ? 0 : 0.18
             self.window?.animator().alphaValue = 1
         }
     }
@@ -35,7 +35,7 @@ final class RecordingHUDController {
     func hide() {
         guard let win = window else { return }
         NSAnimationContext.runAnimationGroup({ ctx in
-            ctx.duration = 0.18
+            ctx.duration = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ? 0 : 0.18
             win.animator().alphaValue = 0
         }, completionHandler: { [weak self] in
             self?.window?.orderOut(nil)
@@ -117,7 +117,7 @@ struct RecordingHUDView: View {
     let onDiscard: () -> Void
     let onStop:  () -> Void
 
-    @State private var pulse = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// The actual configured "stop recording" hotkey — pressing record again toggles off.
     private var stopHotkeyName: String {
@@ -134,93 +134,83 @@ struct RecordingHUDView: View {
         String(format: "%02d", Int((recorder.liveDuration - floor(recorder.liveDuration)) * 100))
     }
 
-    private var durationLabel: String {
-        String(format: "%.1fs", recorder.liveDuration)
-    }
-
     var body: some View {
         let s = recorder.liveStats
         ZStack {
-            // Inky translucent layer over the host glass: guarantees legible white
-            // content over any desktop, while the NSGlassEffectView behind still
-            // refracts. (This is the design's exact approach.)
+            // A calm, dark surface keeps the timer readable over a busy desktop.
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(LinearGradient(
-                    colors: [Color(red: 0.10, green: 0.11, blue: 0.14).opacity(0.52),
-                             Color(red: 0.047, green: 0.051, blue: 0.071).opacity(0.52)],
-                    startPoint: .top, endPoint: .bottom))
+                .fill(Color(red: 0.08, green: 0.085, blue: 0.10).opacity(0.88))
 
-            VStack(alignment: .leading, spacing: 10) {
-                // Top row: status + big gradient timer
-                HStack(spacing: 10) {
-                    RecDot(size: 10)
-                    Text("RECORDING")
-                        .font(.system(size: 11, weight: .semibold))
-                        .tracking(0.6)
-                        .foregroundStyle(Color.white.opacity(0.60))
+            VStack(alignment: .leading, spacing: 16) {
+                HStack(spacing: 8) {
+                    RecDot(size: 8, color: Brand.red400)
+                    Text("Recording")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.90))
                     Spacer()
-                    HStack(alignment: .firstTextBaseline, spacing: 0) {
-                        Text("\(minutes):\(seconds)")
-                            .font(.system(size: 22, weight: .semibold, design: .monospaced))
-                            .tracking(-0.5)
-                        Text(".\(hundredths)")
-                            .font(.system(size: 16, weight: .semibold, design: .monospaced))
-                            .opacity(0.55)
-                    }
-                    .foregroundStyle(LinearGradient(
-                        colors: [.white, Color(red: 0.77, green: 0.78, blue: 0.82)],
-                        startPoint: .top, endPoint: .bottom))
-                    .contentTransition(.numericText())
+                    Text("TinyRecorder")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.55))
                 }
 
-                // Event-track panel
-                VStack(spacing: 2) {
+                HStack(alignment: .firstTextBaseline, spacing: 0) {
+                    Text("\(minutes):\(seconds)")
+                        .font(.system(size: 36, weight: .medium, design: .monospaced))
+                        .tracking(-1.5)
+                        .foregroundStyle(.white)
+                    Text(".\(hundredths)")
+                        .font(.system(size: 22, weight: .regular, design: .monospaced))
+                        .foregroundStyle(.white.opacity(0.55))
+                    Spacer(minLength: 0)
+                }
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+                .contentTransition(reduceMotion ? .identity : .numericText())
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Recording duration")
+                .accessibilityValue("\(Int(recorder.liveDuration)) seconds")
+
+                VStack(spacing: 8) {
                     LiveWaveform(events: recorder.events)
-                        .frame(height: 28)
+                        .frame(height: 30)
+                        .accessibilityHidden(true)
                     HStack {
-                        Text("0s")
+                        Text("Input activity")
                         Spacer()
-                        Text(durationLabel).foregroundStyle(Color.white.opacity(0.55))
-                        Spacer()
-                        Text("LIVE")
+                        Text("\(recorder.eventCount) events")
+                            .monospacedDigit()
                     }
-                    .font(.system(size: 9.5, weight: .medium, design: .monospaced))
-                    .foregroundStyle(Color.white.opacity(0.35))
-                }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 8)
-                .background(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(Color.black.opacity(0.30))
-                        .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .strokeBorder(Color.white.opacity(0.05), lineWidth: 0.5)))
-
-                // 4-stat grid
-                HStack(spacing: 6) {
-                    HUDStat(icon: "cursorarrow.click", value: s.clicks, label: "Clicks", tint: Brand.sigGreen)
-                    HUDStat(icon: "keyboard",          value: s.keys,   label: "Keys",   tint: Brand.sigBlue)
-                    HUDStat(icon: "arrow.up.and.down", value: s.scrolls, label: "Scroll", tint: Brand.sigTeal)
-                    HUDStat(icon: "hand.draw",         value: s.drags,  label: "Drag",   tint: Brand.sigViolet)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.white.opacity(0.60))
                 }
 
-                // Action bar
-                HStack(spacing: 6) {
+                Rectangle()
+                    .fill(.white.opacity(0.10))
+                    .frame(height: 1)
+
+                HStack(spacing: 12) {
+                    HUDStat(value: s.clicks, label: "Clicks")
+                    HUDStat(value: s.keys, label: "Keys")
+                    HUDStat(value: s.scrolls, label: "Scrolls")
+                    HUDStat(value: s.drags, label: "Drags")
+                }
+
+                HStack(spacing: 8) {
                     HUDButton(title: "Discard", icon: "trash", shortcut: emergencyHotkeyName, tint: nil, action: onDiscard)
                     HUDButton(title: "Stop", icon: "stop.fill", shortcut: stopHotkeyName, tint: Brand.red500, action: onStop)
+                        .help("Stop and save recording")
                 }
             }
-            .padding(14)
+            .padding(18)
         }
-        .frame(width: 320)
+        .frame(width: 336)
         .fixedSize(horizontal: false, vertical: true)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .strokeBorder(Color.white.opacity(0.14), lineWidth: 0.5)
+                .strokeBorder(Color.white.opacity(0.12), lineWidth: 1)
         )
         .environment(\.colorScheme, .dark)
-        .onAppear { pulse = recorder.isRecording }
-        .onChange(of: recorder.isRecording) { _, recording in pulse = recording }
     }
 }
 
@@ -238,9 +228,9 @@ private struct LiveWaveform: View {
             let count = max(1, recent.count)
 
             ZStack(alignment: .leading) {
-                Capsule(style: .continuous)
-                    .fill(Color.primary.opacity(0.06))
-                    .frame(height: h)
+                Rectangle()
+                    .fill(Color.white.opacity(0.12))
+                    .frame(height: 1)
 
                 ForEach(0..<recent.count, id: \.self) { i in
                     let ev = recent[i]
@@ -255,41 +245,31 @@ private struct LiveWaveform: View {
                         .offset(x: x)
                 }
             }
+            .frame(height: h)
+            .clipped()
         }
     }
 }
 
 private struct HUDStat: View {
-    let icon: String
     let value: Int
     let label: String
-    let tint: Color
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Image(systemName: icon)
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(tint)
+        VStack(alignment: .leading, spacing: 4) {
             Text("\(value)")
-                .font(.system(size: 14, weight: .semibold, design: .monospaced))
+                .font(.system(size: 17, weight: .medium, design: .monospaced))
                 .foregroundStyle(.white)
-                .tracking(-0.2)
-                .contentTransition(.numericText())
-                .animation(.spring(response: 0.4), value: value)
-            Text(label.uppercased())
-                .font(.system(size: 9, weight: .medium))
-                .tracking(0.3)
-                .foregroundStyle(Color.white.opacity(0.40))
+                .contentTransition(reduceMotion ? .identity : .numericText())
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: value)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            Text(label)
+                .font(.system(size: 11))
+                .foregroundStyle(Color.white.opacity(0.60))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 7)
-        .background(
-            RoundedRectangle(cornerRadius: 9, style: .continuous)
-                .fill(Color.white.opacity(0.04))
-                .overlay(RoundedRectangle(cornerRadius: 9, style: .continuous)
-                    .strokeBorder(Color.white.opacity(0.06), lineWidth: 0.5))
-        )
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(value) \(label)")
     }
@@ -308,36 +288,31 @@ private struct HUDButton: View {
         Button(action: action) {
             HStack(spacing: 8) {
                 Image(systemName: icon)
-                    .font(.system(size: 10, weight: .bold))
+                    .font(.system(size: 11, weight: .semibold))
                 Text(title)
-                    .font(.system(size: 12, weight: .semibold))
-                    .tracking(-0.1)
+                    .font(.system(size: 13, weight: .semibold))
                 Spacer(minLength: 0)
-                KeyCapView(text: shortcut, size: .sm, variant: .glass)
+                Text(shortcut)
+                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                    .foregroundStyle(.white.opacity(0.70))
             }
             .foregroundStyle(.white)
             .padding(.horizontal, 12)
-            .frame(height: 36)
+            .frame(height: 40)
             .frame(maxWidth: .infinity)
             .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(
-                        tint != nil
-                            ? AnyShapeStyle(Brand.redGradient)
-                            : AnyShapeStyle(Color.white.opacity(0.08))
-                    )
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    .fill(tint ?? Color.white.opacity(hovered ? 0.13 : 0.08))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .strokeBorder(Color.white.opacity(tint != nil ? 0.22 : 0.10), lineWidth: 0.5)
-                    )
-                    .shadow(
-                        color: (tint ?? .black).opacity(hovered ? 0.32 : (tint != nil ? 0.28 : 0.14)),
-                        radius: hovered ? 7 : 4, y: 2
+                        RoundedRectangle(cornerRadius: 9, style: .continuous)
+                            .strokeBorder(Color.white.opacity(hovered ? 0.24 : 0.10), lineWidth: 1)
                     )
             )
+            .contentShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
         }
-        .buttonStyle(HoverPressButtonStyle())
+        .buttonStyle(.plain)
         .onHover { hovered = $0 }
-        .interactiveLift3D(intensity: 0.82, cornerRadius: 12)
+        .accessibilityLabel(title == "Stop" ? "Stop and save recording" : "Discard recording")
+        .accessibilityHint("Shortcut \(shortcut)")
     }
 }

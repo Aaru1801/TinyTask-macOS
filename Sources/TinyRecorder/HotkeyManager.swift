@@ -7,6 +7,9 @@ final class HotkeyManager {
 
     private var refs: [UInt32: EventHotKeyRef] = [:]
     private var handlers: [UInt32: () -> Void] = [:]
+    private var keyCodes: [UInt32: UInt32] = [:]
+    private var suppressedKeys: Set<UInt32> = []
+    private var interruptingModifiers: Set<UInt16> = []
     private var nextID: UInt32 = 1
     private var eventHandler: EventHandlerRef?
 
@@ -15,10 +18,10 @@ final class HotkeyManager {
     }
 
     private func installHandler() {
-        var spec = EventTypeSpec(
-            eventClass: OSType(kEventClassKeyboard),
-            eventKind: UInt32(kEventHotKeyPressed)
-        )
+        var specs = [
+            EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed)),
+            EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyReleased))
+        ]
         InstallEventHandler(
             GetApplicationEventTarget(),
             { _, eventRef, _ -> OSStatus in
@@ -34,11 +37,20 @@ final class HotkeyManager {
                     &hkID
                 )
                 if status == noErr {
-                    HotkeyManager.shared.handlers[hkID.id]?()
+                    let manager = HotkeyManager.shared
+                    if let key = manager.keyCodes[hkID.id] {
+                        if GetEventKind(eventRef) == UInt32(kEventHotKeyReleased) {
+                            manager.suppressedKeys.remove(key)
+                        } else if manager.suppressedKeys.contains(key) || manager.shouldSuppressControlAction {
+                            manager.suppressedKeys.insert(key)
+                        } else {
+                            manager.handlers[hkID.id]?()
+                        }
+                    }
                 }
                 return noErr
             },
-            1, &spec, nil, &eventHandler
+            specs.count, &specs, nil, &eventHandler
         )
     }
 
@@ -59,6 +71,7 @@ final class HotkeyManager {
         guard status == noErr, let ref else { return nil }
         refs[id] = ref
         handlers[id] = handler
+        keyCodes[id] = keyCode
         return id
     }
 
@@ -66,12 +79,40 @@ final class HotkeyManager {
         if let ref = refs[id] { UnregisterEventHotKey(ref) }
         refs.removeValue(forKey: id)
         handlers.removeValue(forKey: id)
+        if let key = keyCodes.removeValue(forKey: id) { suppressedKeys.remove(key) }
+    }
+
+    /// The same physical press that interrupted playback must not subsequently
+    /// start another macro when Carbon delivers its hotkey notification.
+    func suppressUntilRelease(keyCode: UInt32) {
+        if keyCodes.values.contains(keyCode) { suppressedKeys.insert(keyCode) }
+    }
+
+    func suppressWhileModifierHeld(keyCode: UInt16) {
+        // Caps Lock is latched, so it is not a held shortcut prefix.
+        if keyCode != 57 { interruptingModifiers.insert(keyCode) }
+    }
+
+    /// Fn or Command can interrupt playback before the main key in a shortcut
+    /// arrives. Do not let the rest of that same chord restart playback/capture.
+    var shouldSuppressControlAction: Bool {
+        interruptingModifiers = interruptingModifiers.filter {
+            CGEventSource.keyState(.hidSystemState, key: $0)
+        }
+        return !interruptingModifiers.isEmpty
+    }
+
+    var registeredKeyCodes: Set<UInt16> {
+        Set(keyCodes.values.compactMap(UInt16.init(exactly:)))
     }
 
     func unregisterAll() {
         for ref in refs.values { UnregisterEventHotKey(ref) }
         refs.removeAll()
         handlers.removeAll()
+        keyCodes.removeAll()
+        suppressedKeys.removeAll()
+        interruptingModifiers.removeAll()
     }
 }
 

@@ -111,6 +111,7 @@ struct EditorView: View {
                     }
                     .frame(minWidth: 420)
                 }
+                .disabled(recorder.isRecording)
 
                 EditorFooter(eventCount: recorder.events.count,
                              selectedCount: selection.count,
@@ -123,6 +124,10 @@ struct EditorView: View {
         // macro deleted) — stale indices would corrupt the new buffer.
         .onChange(of: library.currentMacroID) {
             selection.removeAll()
+        }
+        .onChange(of: recorder.bufferRevision) {
+            selection.removeAll()
+            loadInspector()
         }
         .onDisappear { controller.persistEdits() }
     }
@@ -685,19 +690,9 @@ private struct EditorSidebar: View {
 
     // MARK: - Actions
 
-    /// Snapshots the buffer and registers an undo (redo falls out of
-    /// re-registration inside the undo block) before running a mutation.
+    /// Let the recorder scope undo history to its current macro buffer.
     private func withUndo(_ name: String, _ mutate: () -> Void) {
-        let snapshot = recorder.events
-        undoManager?.registerUndo(withTarget: recorder) { [weak undoManager] rec in
-            let redoSnapshot = rec.events
-            rec.loadEvents(snapshot)
-            undoManager?.registerUndo(withTarget: rec) { rec2 in
-                rec2.loadEvents(redoSnapshot)
-            }
-        }
-        undoManager?.setActionName(name)
-        mutate()
+        recorder.performEdit(named: name, undoManager: undoManager, mutate)
     }
 
     private func deleteSelected() {

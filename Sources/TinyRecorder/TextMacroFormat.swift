@@ -7,11 +7,11 @@ import CoreGraphics
 /// Each event line:  optional `@<seconds>` absolute-time prefix, then a VERB + args.
 /// Comments start with `#`; blank lines are ignored; verbs are case-insensitive.
 ///
-///   MOVE x y
-///   DRAG x y BTN
-///   DOWN x y BTN [clicks=N]
-///   UP   x y BTN [clicks=N]        BTN ∈ { L | R | M | <int> }
-///   SCROLL dy [dx]
+///   MOVE x y [+MODS]
+///   DRAG x y BTN [+MODS]
+///   DOWN x y BTN [clicks=N] [+MODS]
+///   UP   x y BTN [clicks=N] [+MODS]  BTN ∈ { L | R | M | <int> }
+///   SCROLL dy [dx] [+MODS]
 ///   KEYDOWN <key> [+MODS]
 ///   KEYUP   <key> [+MODS]          <key> = symbolic name or #<decimal> raw keycode
 ///   FLAGS   <key> <maskhex>
@@ -27,27 +27,27 @@ enum TextMacroFormat {
             let mods = modSuffix(e.flags)
             switch e.kind {
             case .mouseMoved:
-                lines.append("\(t)  MOVE \(coord(e.x)) \(coord(e.y))")
+                lines.append("\(t)  MOVE \(coord(e.x)) \(coord(e.y))\(mods)")
             case .leftMouseDragged:
-                lines.append("\(t)  DRAG \(coord(e.x)) \(coord(e.y)) L")
+                lines.append("\(t)  DRAG \(coord(e.x)) \(coord(e.y)) L\(mods)")
             case .rightMouseDragged:
-                lines.append("\(t)  DRAG \(coord(e.x)) \(coord(e.y)) R")
+                lines.append("\(t)  DRAG \(coord(e.x)) \(coord(e.y)) R\(mods)")
             case .otherMouseDragged:
-                lines.append("\(t)  DRAG \(coord(e.x)) \(coord(e.y)) M")
+                lines.append("\(t)  DRAG \(coord(e.x)) \(coord(e.y)) \(otherButton(e))\(mods)")
             case .leftMouseDown:
-                lines.append("\(t)  DOWN \(coord(e.x)) \(coord(e.y)) L\(clicks(e))")
+                lines.append("\(t)  DOWN \(coord(e.x)) \(coord(e.y)) L\(clicks(e))\(mods)")
             case .leftMouseUp:
-                lines.append("\(t)  UP \(coord(e.x)) \(coord(e.y)) L\(clicks(e))")
+                lines.append("\(t)  UP \(coord(e.x)) \(coord(e.y)) L\(clicks(e))\(mods)")
             case .rightMouseDown:
-                lines.append("\(t)  DOWN \(coord(e.x)) \(coord(e.y)) R\(clicks(e))")
+                lines.append("\(t)  DOWN \(coord(e.x)) \(coord(e.y)) R\(clicks(e))\(mods)")
             case .rightMouseUp:
-                lines.append("\(t)  UP \(coord(e.x)) \(coord(e.y)) R\(clicks(e))")
+                lines.append("\(t)  UP \(coord(e.x)) \(coord(e.y)) R\(clicks(e))\(mods)")
             case .otherMouseDown:
-                lines.append("\(t)  DOWN \(coord(e.x)) \(coord(e.y)) M\(clicks(e))")
+                lines.append("\(t)  DOWN \(coord(e.x)) \(coord(e.y)) \(otherButton(e))\(clicks(e))\(mods)")
             case .otherMouseUp:
-                lines.append("\(t)  UP \(coord(e.x)) \(coord(e.y)) M\(clicks(e))")
+                lines.append("\(t)  UP \(coord(e.x)) \(coord(e.y)) \(otherButton(e))\(clicks(e))\(mods)")
             case .scrollWheel:
-                lines.append("\(t)  SCROLL \(e.scrollDeltaY) \(e.scrollDeltaX)")
+                lines.append("\(t)  SCROLL \(e.scrollDeltaY) \(e.scrollDeltaX)\(mods)")
             case .keyDown:
                 lines.append("\(t)  KEYDOWN \(keyName(e.keyCode))\(mods)")
             case .keyUp:
@@ -65,6 +65,9 @@ enum TextMacroFormat {
     private static func clicks(_ e: RecordedEvent) -> String {
         e.clickCount > 1 ? " clicks=\(e.clickCount)" : ""
     }
+    private static func otherButton(_ e: RecordedEvent) -> String {
+        e.mouseButton == 2 ? "M" : String(e.mouseButton)
+    }
     private static func modSuffix(_ flags: UInt64) -> String {
         var parts: [String] = []
         if flags & ModFlag.command != 0 { parts.append("CMD") }
@@ -79,7 +82,9 @@ enum TextMacroFormat {
     // MARK: - Import
 
     static func parse(_ text: String) throws -> MacroImportResult {
-        let rawLines = text.split(separator: "\n", omittingEmptySubsequences: false)
+        // CRLF is one Swift Character, so splitting only on "\n" misses
+        // entire files saved by Windows editors.
+        let rawLines = text.split(omittingEmptySubsequences: false, whereSeparator: { $0.isNewline })
         guard let first = rawLines.first(where: { !$0.trimmingCharacters(in: .whitespaces).isEmpty }),
               first.trimmingCharacters(in: .whitespaces).uppercased().hasPrefix("TINYRECORDER") else {
             throw MacroImportError.notTextFormat("missing 'TINYRECORDER' header line.")
@@ -175,20 +180,20 @@ enum TextMacroFormat {
 
         switch verb {
         case "MOVE":
-            return .make(.mouseMoved, time: time, x: try num(0), y: try num(1))
+            return .make(.mouseMoved, time: time, x: try num(0), y: try num(1), flags: mods(args))
         case "DRAG":
             let b = button(args.count > 2 ? args[2] : "L")
-            return .make(b.2, time: time, x: try num(0), y: try num(1), mouseButton: b.3)
+            return .make(b.2, time: time, x: try num(0), y: try num(1), flags: mods(args), mouseButton: b.3)
         case "DOWN":
             let b = button(args.count > 2 ? args[2] : "L")
-            return .make(b.0, time: time, x: try num(0), y: try num(1), mouseButton: b.3, clickCount: clickCount())
+            return .make(b.0, time: time, x: try num(0), y: try num(1), flags: mods(args), mouseButton: b.3, clickCount: clickCount())
         case "UP":
             let b = button(args.count > 2 ? args[2] : "L")
-            return .make(b.1, time: time, x: try num(0), y: try num(1), mouseButton: b.3, clickCount: clickCount())
+            return .make(b.1, time: time, x: try num(0), y: try num(1), flags: mods(args), mouseButton: b.3, clickCount: clickCount())
         case "SCROLL":
             let dy = Int32(args.first ?? "0") ?? 0
             let dx = args.count > 1 ? (Int32(args[1]) ?? 0) : 0
-            return .make(.scrollWheel, time: time, scrollDeltaY: dy, scrollDeltaX: dx)
+            return .make(.scrollWheel, time: time, flags: mods(args), scrollDeltaY: dy, scrollDeltaX: dx)
         case "KEYDOWN":
             guard let code = keyCode(args.first ?? "") else { throw ParseError.bad }
             return .make(.keyDown, time: time, keyCode: code, flags: mods(args))
@@ -218,8 +223,8 @@ enum TextMacroFormat {
     }
 
     private static func mods(_ args: [String]) -> UInt64 {
+        var f: UInt64 = 0
         for a in args where a.hasPrefix("+") {
-            var f: UInt64 = 0
             for part in a.dropFirst().split(separator: "+") {
                 switch part.uppercased() {
                 case "CMD": f |= ModFlag.command
@@ -231,9 +236,8 @@ enum TextMacroFormat {
                 default: break
                 }
             }
-            return f
         }
-        return 0
+        return f
     }
 
     // MARK: - Key name <-> macOS keycode

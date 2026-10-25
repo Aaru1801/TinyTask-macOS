@@ -13,6 +13,7 @@ struct ActivityCenterView: View {
     @EnvironmentObject private var player: Player
     @EnvironmentObject private var state: AppState
     @EnvironmentObject private var library: MacroLibrary
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private enum Mode: Equatable { case countdown, recording, playback }
 
@@ -40,7 +41,7 @@ struct ActivityCenterView: View {
     private var title: String {
         switch mode {
         case .countdown: return "Preparing to record"
-        case .recording: return "Recording new macro"
+        case .recording: return "Recording"
         case .playback:  return macro?.name ?? "Playing macro"
         }
     }
@@ -65,19 +66,20 @@ struct ActivityCenterView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: compact ? 7 : 8) {
-            HStack(spacing: 9) {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 10) {
                 activityIcon
 
-                VStack(alignment: .leading, spacing: 1) {
+                VStack(alignment: .leading, spacing: 3) {
                     Text(title)
-                        .font(.system(size: compact ? 11.5 : 12.5, weight: .semibold))
+                        .font(.system(size: compact ? 13 : 14, weight: .semibold))
                         .foregroundStyle(.primary)
                         .lineLimit(1)
                     Text(subtitle)
-                        .font(.system(size: compact ? 9.5 : 10.5, weight: .medium))
+                        .font(.system(size: compact ? 11 : 12))
                         .foregroundStyle(.secondary)
-                        .lineLimit(1)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
 
                 Spacer(minLength: 4)
@@ -85,52 +87,57 @@ struct ActivityCenterView: View {
             }
 
             ActivityProgressBar(value: progress, tint: tint)
-                .frame(height: compact ? 7 : 8)
+                .frame(height: 4)
                 .accessibilityLabel(progressAccessibilityLabel)
 
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(primaryDetail)
-                    .font(.system(size: compact ? 9.5 : 10.5, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                    .contentTransition(.numericText())
-                Spacer(minLength: 6)
-                Text(secondaryDetail)
-                    .font(.system(size: compact ? 9 : 10, weight: .medium, design: .monospaced))
-                    .foregroundStyle(.tertiary)
-                    .lineLimit(1)
-                    .contentTransition(.numericText())
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .firstTextBaseline, spacing: 16) {
+                    primaryDetailLabel
+                    Spacer(minLength: 0)
+                    secondaryDetailLabel
+                }
+                VStack(alignment: .leading, spacing: 4) {
+                    primaryDetailLabel
+                    secondaryDetailLabel
+                }
             }
         }
-        .padding(.horizontal, compact ? 10 : 11)
-        .padding(.vertical, compact ? 9 : 10)
+        .padding(compact ? 13 : 16)
         .background(activityBackground)
-        .shadow(color: tint.opacity(0.10), radius: 8, y: 3)
-        .interactiveLift3D(intensity: 0.28, cornerRadius: 11)
         .accessibilityElement(children: .contain)
+    }
+
+    private var primaryDetailLabel: some View {
+        Text(primaryDetail)
+            .font(.system(size: 11, weight: .medium))
+            .foregroundStyle(.secondary)
+            .monospacedDigit()
+            .contentTransition(reduceMotion ? .identity : .numericText())
+    }
+
+    private var secondaryDetailLabel: some View {
+        Text(secondaryDetail)
+            .font(.system(size: 11))
+            .foregroundStyle(.secondary)
+            .monospacedDigit()
+            .contentTransition(reduceMotion ? .identity : .numericText())
     }
 
     private var activityIcon: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 7, style: .continuous)
-                .fill(LinearGradient(
-                    colors: [tint.opacity(0.30), tint.opacity(0.12)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                ))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 7, style: .continuous)
-                        .strokeBorder(tint.opacity(0.35), lineWidth: 0.6)
-                )
+            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                .fill(tint.opacity(0.10))
             if mode == .recording {
-                RecDot(size: compact ? 8 : 9, color: tint)
+                RecDot(size: 9, color: tint)
             } else {
                 Image(systemName: activitySymbol)
-                    .font(.system(size: compact ? 11 : 12, weight: .bold))
+                    .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(tint)
-                    .symbolEffect(.pulse, options: .repeating, isActive: mode == .countdown)
+                    .symbolEffect(.pulse, options: .repeating, isActive: mode == .countdown && !reduceMotion)
             }
         }
-        .frame(width: compact ? 27 : 30, height: compact ? 27 : 30)
+        .frame(width: 34, height: 34)
+        .accessibilityHidden(true)
     }
 
     private var activitySymbol: String {
@@ -143,7 +150,7 @@ struct ActivityCenterView: View {
 
     @ViewBuilder
     private var controls: some View {
-        HStack(spacing: 5) {
+        HStack(spacing: 6) {
             if mode == .recording {
                 activityButton(
                     symbol: "trash",
@@ -153,7 +160,7 @@ struct ActivityCenterView: View {
                 )
             }
             activityButton(
-                symbol: mode == .recording ? "stop.fill" : "xmark",
+                symbol: mode == .countdown ? "xmark" : "stop.fill",
                 help: primaryControlHelp,
                 tint: mode == .recording ? Brand.red500 : .secondary
             ) {
@@ -179,35 +186,26 @@ struct ActivityCenterView: View {
     ) -> some View {
         Button(action: action) {
             Image(systemName: symbol)
-                .font(.system(size: 9.5, weight: .bold))
+                .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(tint)
-                .frame(width: 23, height: 23)
+                .frame(width: 32, height: 32)
                 .background(
-                    Circle()
-                        .fill(Color.primary.opacity(0.07))
-                        .overlay(Circle().strokeBorder(Color.primary.opacity(0.10), lineWidth: 0.5))
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color.primary.opacity(0.06))
                 )
+                .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         }
-        .buttonStyle(HoverPressButtonStyle())
-        .interactiveLift3D(intensity: 0.62, cornerRadius: 999)
+        .buttonStyle(.plain)
         .help(help)
         .accessibilityLabel(help)
     }
 
     private var activityBackground: some View {
-        RoundedRectangle(cornerRadius: 11, style: .continuous)
+        RoundedRectangle(cornerRadius: 12, style: .continuous)
             .fill(Color(nsColor: .controlBackgroundColor))
             .overlay(
-                RoundedRectangle(cornerRadius: 11, style: .continuous)
-                    .fill(LinearGradient(
-                        colors: [tint.opacity(0.075), .clear, Color.primary.opacity(0.018)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 11, style: .continuous)
-                    .strokeBorder(tint.opacity(0.30), lineWidth: 0.7)
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
             )
     }
 
@@ -273,15 +271,13 @@ private struct ActivityProgressBar: View {
             let width = geometry.size.width
             ZStack(alignment: .leading) {
                 Capsule(style: .continuous)
-                    .fill(Color.primary.opacity(0.10))
-                    .overlay(Capsule(style: .continuous)
-                        .strokeBorder(Color.primary.opacity(0.08), lineWidth: 0.5))
+                    .fill(tint.opacity(0.12))
 
                 if let value {
                     let clamped = max(0, min(1, value))
                     progressFill
                         .frame(width: max(clamped > 0 ? 5 : 0, width * clamped))
-                        .animation(.linear(duration: 0.10), value: clamped)
+                        .animation(reduceMotion ? nil : .linear(duration: 0.10), value: clamped)
                 } else {
                     TimelineView(.animation(minimumInterval: 1.0 / 24.0, paused: reduceMotion)) { context in
                         let phase = reduceMotion
@@ -300,21 +296,7 @@ private struct ActivityProgressBar: View {
 
     private var progressFill: some View {
         Capsule(style: .continuous)
-            .fill(LinearGradient(
-                colors: [tint.opacity(0.86), tint, tint.opacity(0.78)],
-                startPoint: .leading,
-                endPoint: .trailing
-            ))
-            .overlay(
-                Capsule(style: .continuous)
-                    .fill(LinearGradient(
-                        colors: [.white.opacity(0.30), .clear],
-                        startPoint: .top,
-                        endPoint: .center
-                    ))
-                    .blendMode(.screen)
-            )
-            .shadow(color: tint.opacity(0.35), radius: 3)
+            .fill(tint)
     }
 }
 

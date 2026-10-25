@@ -4,6 +4,19 @@ import AppKit
 // MARK: - Brand design tokens
 
 enum Brand {
+    /// Quiet, opaque content surfaces keep the workspace legible in either appearance.
+    static let canvas = adaptiveGray(light: 0.975, dark: 0.115)
+    static let surface = adaptiveGray(light: 1.0, dark: 0.155)
+    static let sidebar = adaptiveGray(light: 0.945, dark: 0.135)
+    static let hairline = Color.primary.opacity(0.09)
+
+    private static func adaptiveGray(light: CGFloat, dark: CGFloat) -> Color {
+        Color(nsColor: NSColor(name: nil) { appearance in
+            let isDark = appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+            return NSColor(white: isDark ? dark : light, alpha: 1)
+        })
+    }
+
     // Signature red — richer, more confident (rec scale)
     static let red400 = Color(red: 0.961, green: 0.329, blue: 0.329) // #f55454
     static let red500 = Color(red: 0.906, green: 0.169, blue: 0.169) // #e72b2b
@@ -289,13 +302,14 @@ private struct InteractiveLift3D: ViewModifier {
 
 struct HoverPressButtonStyle: ButtonStyle {
     var pressScale: CGFloat = 0.96
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? pressScale : 1)
-            .offset(y: configuration.isPressed ? 1 : 0)
+            .scaleEffect(configuration.isPressed && !reduceMotion ? pressScale : 1)
+            .offset(y: configuration.isPressed && !reduceMotion ? 1 : 0)
             .brightness(configuration.isPressed ? -0.035 : 0)
-            .animation(.spring(response: 0.15, dampingFraction: 0.62), value: configuration.isPressed)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: configuration.isPressed)
     }
 }
 

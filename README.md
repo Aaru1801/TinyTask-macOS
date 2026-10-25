@@ -8,6 +8,10 @@ macOS doesn't ship a built-in macro recorder — TinyRecorder is one. No subscri
 
 Unzip `TinyRecorder-1.9.0.zip`, drag TinyRecorder into `/Applications`, and launch. The app walks you through permissions on first launch.
 
+## Workspace refresh (in development)
+
+The library now has a roomier sidebar, a dedicated search row, and a prominent **New recording** action. Macro cards show their event count, timeline, current status, and a labeled Play button. The menu-bar popover uses a single readable column with direct Library, Editor, and Settings links. Quick Run, live activity, and the recording HUD share clearer typography, larger controls, and quieter surfaces, with light/dark appearance and Reduce Motion support.
+
 ## What's in 1.9 — "Quick Run & Live Activity"
 
 - ⚡ **Quick Run** — press **⌘K** for a Spotlight-style command palette with fuzzy macro search, arrow-key navigation, shortcuts, and instant access to recording, import, editing, and settings.
@@ -61,7 +65,7 @@ Introduced a cohesive native design system across every surface:
 The welcome wizard handles this. If you skipped it, macOS asks for two permissions under **System Settings → Privacy & Security**:
 
 1. **Accessibility** — to *post* synthetic events during playback.
-2. **Input Monitoring** — to *observe* events during recording.
+2. **Input Monitoring** — to *observe* events during recording and stop playback when you use the mouse or keyboard.
 
 The popover and main window detect when either is missing and show an "Open Settings" banner.
 
@@ -76,6 +80,8 @@ Click the Dock icon (or menu-bar icon) to open the library:
 5. Click **✎ Edit** on a card for the timeline editor — scrub, trim, time-stretch, insert waits, edit individual events.
 
 Each card has small chips for hotkey, loop count, favorite ★, and a **⋯** menu for Rename, Tag, Duplicate, Export, Delete. Cmd-click cards to multi-select for bulk operations. Drag a card onto another to reorder.
+
+Selecting a saved macro during recording saves the capture first. Editor changes support **⌘Z** / **⇧⌘Z** for undo and redo; loading another macro or starting a recording clears the previous macro's edit history.
 
 ## Hotkeys
 
@@ -95,6 +101,8 @@ Each card has small chips for hotkey, loop count, favorite ★, and a **⋯** me
 | Library window | **⌘0** | bring to front |
 
 Configurable in **Preferences → Hotkeys**. Any saved macro can also have its own per-macro F-key assigned via the card's "⋯ → Assign Hotkey" — that hotkey will play that specific macro from any app.
+
+Control shortcut keystrokes are excluded from recordings; ordinary input is still recorded while a control hotkey is held. During playback, moving the mouse, clicking, scrolling, or pressing a key stops the macro and any remaining loops or chain. The macro's own generated input does not stop it, and releasing the shortcut or click that launched playback is ignored. This also applies to exported `.command` scripts. Playback requires Input Monitoring so this stop behavior remains available.
 
 ## File format
 
@@ -154,7 +162,9 @@ TINYRECORDER 1
 @0.700  SCROLL -3 0
 ```
 
-Verbs: `MOVE x y`, `DRAG x y BTN`, `DOWN/UP x y BTN [clicks=N]` (BTN = `L`/`R`/`M`), `SCROLL dy [dx]`, `KEYDOWN/KEYUP <key> [+MODS]`, `FLAGS <key> <maskhex>`, `WAIT ms`. Keys are symbolic names (`A`, `SPACE`, `F1`, `LEFT`, `CMD`…) or `#<keycode>` for anything unnamed.
+Verbs: `MOVE x y`, `DRAG x y BTN`, `DOWN/UP x y BTN [clicks=N]` (BTN = `L`/`R`/`M`, or a numeric extra-button ID such as `4`), `SCROLL dy [dx]`, `KEYDOWN/KEYUP <key> [+MODS]`, `FLAGS <key> <maskhex>`, `WAIT ms`. Keys are symbolic names (`A`, `SPACE`, `F1`, `LEFT`, `CMD`…) or `#<keycode>` for anything unnamed.
+
+Mouse and scroll events also accept `+MODS`, such as `DOWN 640 400 L +CMD` or `SCROLL -3 +SHIFT`. Text export preserves these modifiers and extra mouse buttons. Both Unix and Windows line endings are supported.
 
 ### Command-line converter
 
@@ -169,6 +179,8 @@ The output format is chosen by the output file's extension (`.tinyrec`/`.json` o
 ## Development
 
 Build with `./build.sh` — it compiles the SwiftPM package, assembles `TinyRecorder.app`, stamps the build number from git, and ad-hoc signs so Accessibility approval sticks across rebuilds. Sources live in `Sources/TinyRecorder/`.
+
+Run `swift test` for regression coverage of text conversion and editor undo/redo. These tests use in-memory events without recording input, posting synthetic events, or accessing the saved library. If a synced workspace adds Finder metadata that prevents test-bundle signing, use a scratch directory outside it: `swift test --scratch-path /tmp/TinyRecorder-tests`.
 
 Requires the macOS 26 SDK (Xcode 26+) to compile the Liquid Glass layer; the app itself runs on macOS 14 or newer, with standard vibrancy on macOS 14–15. The app must **not** be sandboxed — `CGEventTap` recording and `CGEvent` posting require it off.
 

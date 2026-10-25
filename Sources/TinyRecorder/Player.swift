@@ -4,6 +4,11 @@ import Combine
 
 /// Replays a recorded macro by posting CGEvents at the original relative timestamps.
 final class Player: ObservableObject {
+    enum Interruption {
+        case userInput
+        case inputMonitoringUnavailable
+    }
+
     @Published private(set) var isPlaying = false
     @Published private(set) var progress: Double = 0
     @Published private(set) var currentLoop: Int = 0
@@ -24,6 +29,7 @@ final class Player: ObservableObject {
     var isContinuous: Bool { isPlaying && totalLoops == 0 }
 
     private var task: Task<Void, Never>?
+    private let inputMonitor: PlaybackInputMonitoring
     private let inputTracker = SyntheticInputTracker()
     private lazy var telemetryRelay = PlaybackTelemetryRelay(player: self)
     /// Incremented on every play()/stop(). A task only touches published state
@@ -31,18 +37,25 @@ final class Player: ObservableObject {
     /// newer playback that started right after stop().
     private var generation: UInt64 = 0
 
+    init(inputMonitor: PlaybackInputMonitoring = PlaybackInputMonitor()) {
+        self.inputMonitor = inputMonitor
+    }
+
     deinit {
+        inputMonitor.stop()
         let activeGeneration = generation
         task?.cancel()
         inputTracker.releaseInputs(for: activeGeneration, invalidate: true)
     }
 
     /// Play the macro `loops` times. Pass `loops <= 0` for continuous (infinite) playback,
-    /// which only stops on `stop()` or the configured stop hotkey.
+    /// which stops on manual input, `stop()`, or the configured stop hotkey.
     /// The completion receives `true` only when playback ran to natural completion.
     /// A superseded/cancelled generation stays silent, so it cannot affect a newer
     /// playback run's state.
-    func play(events: [RecordedEvent], loops: Int = 1, speed: Double = 1.0, completion: ((Bool) -> Void)? = nil) {
+    func play(events: [RecordedEvent], loops: Int = 1, speed: Double = 1.0,
+              onInterruption: ((Interruption) -> Void)? = nil,
+              completion: ((Bool) -> Void)? = nil) {
         // Recorder, library, importers, and editor persistence all normalize at
         // their boundary. Avoid an O(n log n) copy/sort on the UI thread every
         // time the user presses Play.
@@ -53,6 +66,16 @@ final class Player: ObservableObject {
 
         generation &+= 1
         let gen = generation
+        guard inputMonitor.start(onInput: { [weak self] in
+            guard let self, self.generation == gen else { return }
+            self.stop()
+            onInterruption?(.userInput)
+        }) else {
+            inputMonitor.stop()
+            onInterruption?(.inputMonitoringUnavailable)
+            completion?(false)
+            return
+        }
         isPlaying = true
         progress = 0
         currentLoop = 0
@@ -134,6 +157,7 @@ final class Player: ObservableObject {
                 // Invalidate any coalesced telemetry still waiting behind this
                 // epilogue on the main queue.
                 self.generation &+= 1
+                self.inputMonitor.stop()
                 self.isPlaying = false
                 self.progress = 0
                 self.currentLoop = 0
@@ -149,6 +173,7 @@ final class Player: ObservableObject {
     func stop() {
         let cancelledGeneration = generation
         generation &+= 1
+        inputMonitor.stop()
         task?.cancel()
         task = nil
         // Serialized with event posting, so Stop cannot land between a
@@ -163,26 +188,35 @@ final class Player: ObservableObject {
     }
 
     /// Synchronous playback for CLI mode — no MainActor hops, no published state.
-    /// Blocks the calling (background) thread until done.
-    static func playSynchronously(events: [RecordedEvent], loops: Int, speed: Double) {
+    /// The caller keeps the input monitor's main run loop alive and cancels this
+    /// token when external input arrives.
+    static func playSynchronously(events: [RecordedEvent], loops: Int, speed: Double,
+                                  cancellation: PlaybackCancellation = PlaybackCancellation()) {
         let events = RecordedEvent.normalized(events)
         guard !events.isEmpty else { return }
         let speed = max(0.1, min(speed, 10.0))
         let total = max(1, normalizedLoopCount(loops))
         let tracker = SyntheticInputTracker()
-        for loopIndex in 0..<total {
-            let gen = UInt64(loopIndex + 1)
-            tracker.begin(generation: gen)
+        let gen: UInt64 = 1
+        tracker.begin(generation: gen)
+        cancellation.setCancellationHandler {
+            tracker.releaseInputs(for: gen, invalidate: true)
+        }
+        defer { tracker.releaseInputs(for: gen, invalidate: true) }
+        for _ in 0..<total {
+            if cancellation.isCancelled { break }
             let wallStart = CFAbsoluteTimeGetCurrent()
             for event in events {
                 let target = wallStart + (event.time / speed)
-                let delay = target - CFAbsoluteTimeGetCurrent()
-                if delay > 0, delay.isFinite {
-                    Thread.sleep(forTimeInterval: min(delay, 3600))
+                while !cancellation.isCancelled {
+                    let delay = target - CFAbsoluteTimeGetCurrent()
+                    guard delay > 0, delay.isFinite else { break }
+                    Thread.sleep(forTimeInterval: min(delay, 1.0 / 30.0))
                 }
+                if cancellation.isCancelled { break }
                 _ = tracker.post(event, generation: gen)
             }
-            tracker.releaseInputs(for: gen, invalidate: true)
+            tracker.releaseInputs(for: gen, invalidate: false)
         }
     }
 
@@ -270,7 +304,7 @@ final class Player: ObservableObject {
                 keyDown: ev.kind == .keyDown
             ) {
                 cgEvent.flags = CGEventFlags(rawValue: ev.flags)
-                cgEvent.post(tap: .cghidEventTap)
+                SyntheticPlaybackInput.post(cgEvent)
                 return true
             }
             return false
@@ -284,7 +318,7 @@ final class Player: ObservableObject {
             ) {
                 cgEvent.type = .flagsChanged
                 cgEvent.flags = CGEventFlags(rawValue: ev.flags)
-                cgEvent.post(tap: .cghidEventTap)
+                SyntheticPlaybackInput.post(cgEvent)
                 return true
             }
             return false
@@ -301,7 +335,7 @@ final class Player: ObservableObject {
                 wheel3: 0
             ) {
                 cgEvent.flags = CGEventFlags(rawValue: ev.flags)
-                cgEvent.post(tap: .cghidEventTap)
+                SyntheticPlaybackInput.post(cgEvent)
                 return true
             }
             return false
@@ -332,7 +366,7 @@ final class Player: ObservableObject {
                     cgEvent.setIntegerValueField(.mouseEventClickState, value: ev.clickCount)
                 }
                 cgEvent.flags = CGEventFlags(rawValue: ev.flags)
-                cgEvent.post(tap: .cghidEventTap)
+                SyntheticPlaybackInput.post(cgEvent)
                 return true
             }
             return false
@@ -413,7 +447,7 @@ final class Player: ObservableObject {
                     keyDown: false
                 ) else { continue }
                 event.flags = []
-                event.post(tap: .cghidEventTap)
+                SyntheticPlaybackInput.post(event)
             }
 
             for keyCode in modifiers {
@@ -424,7 +458,7 @@ final class Player: ObservableObject {
                 ) else { continue }
                 event.type = .flagsChanged
                 event.flags = []
-                event.post(tap: .cghidEventTap)
+                SyntheticPlaybackInput.post(event)
             }
 
             for (buttonNumber, location) in buttons {
@@ -440,7 +474,7 @@ final class Player: ObservableObject {
                     mouseButton: button
                 ) else { continue }
                 event.flags = []
-                event.post(tap: .cghidEventTap)
+                SyntheticPlaybackInput.post(event)
             }
         }
 
