@@ -49,6 +49,13 @@ mkdir -p "${CONTENTS}/Resources"
 cp "${BUILD_DIR}/${APP_NAME}" "${CONTENTS}/MacOS/${APP_NAME}"
 cp "${ROOT}/Info.plist" "${CONTENTS}/Info.plist"
 cp "${ROOT}/AppIcon.icns" "${CONTENTS}/Resources/AppIcon.icns"
+# Ship localized resources with the executable, including after relocation.
+cp -R "${BUILD_DIR}/${APP_NAME}_${APP_NAME}.bundle" "${CONTENTS}/Resources/"
+for language in en zh-Hans; do
+    mkdir -p "${CONTENTS}/Resources/${language}.lproj"
+    cp "${ROOT}/Sources/TinyRecorder/Resources/${language}.lproj/InfoPlist.strings" \
+        "${CONTENTS}/Resources/${language}.lproj/InfoPlist.strings"
+done
 chmod +x "${CONTENTS}/MacOS/${APP_NAME}"
 
 # Stamp a monotonically-increasing build number (before signing — editing the

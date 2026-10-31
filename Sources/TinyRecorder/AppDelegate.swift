@@ -139,7 +139,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let appItem = NSMenuItem()
         let appMenu = NSMenu()
         let about = NSMenuItem(
-            title: "About TinyRecorder",
+            title: L10n.text("About TinyRecorder"),
             action: #selector(showAbout(_:)),
             keyEquivalent: ""
         )
@@ -147,7 +147,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         appMenu.addItem(about)
         appMenu.addItem(.separator())
         let prefs = NSMenuItem(
-            title: "Settings…",
+            title: L10n.text("Settings…"),
             action: #selector(showPreferences(_:)),
             keyEquivalent: ","
         )
@@ -155,25 +155,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         appMenu.addItem(prefs)
         appMenu.addItem(.separator())
         appMenu.addItem(NSMenuItem(
-            title: "Hide TinyRecorder",
+            title: L10n.text("Hide TinyRecorder"),
             action: #selector(NSApplication.hide(_:)),
             keyEquivalent: "h"
         ))
         let hideOthers = NSMenuItem(
-            title: "Hide Others",
+            title: L10n.text("Hide Others"),
             action: #selector(NSApplication.hideOtherApplications(_:)),
             keyEquivalent: "h"
         )
         hideOthers.keyEquivalentModifierMask = [.command, .option]
         appMenu.addItem(hideOthers)
         appMenu.addItem(NSMenuItem(
-            title: "Show All",
+            title: L10n.text("Show All"),
             action: #selector(NSApplication.unhideAllApplications(_:)),
             keyEquivalent: ""
         ))
         appMenu.addItem(.separator())
         appMenu.addItem(NSMenuItem(
-            title: "Quit TinyRecorder",
+            title: L10n.text("Quit TinyRecorder"),
             action: #selector(NSApplication.terminate(_:)),
             keyEquivalent: "q"
         ))
@@ -182,35 +182,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // — File menu —
         let fileItem = NSMenuItem()
-        let fileMenu = NSMenu(title: "File")
-        let newRec = NSMenuItem(title: "New Recording", action: #selector(newRecording(_:)), keyEquivalent: "r")
+        let fileMenu = NSMenu(title: L10n.text("File"))
+        let newRec = NSMenuItem(title: L10n.text("New Recording"), action: #selector(newRecording(_:)), keyEquivalent: "r")
         newRec.target = self
         fileMenu.addItem(newRec)
-        let stop = NSMenuItem(title: "Stop", action: #selector(stopAll(_:)), keyEquivalent: ".")
+        let stop = NSMenuItem(title: L10n.text("Stop"), action: #selector(stopAll(_:)), keyEquivalent: ".")
         stop.target = self
         fileMenu.addItem(stop)
         fileMenu.addItem(.separator())
-        let imp = NSMenuItem(title: "Import Macro…", action: #selector(importMacro(_:)), keyEquivalent: "o")
+        let imp = NSMenuItem(title: L10n.text("Import Macro…"), action: #selector(importMacro(_:)), keyEquivalent: "o")
         imp.target = self
-        imp.toolTip = "Import a TinyRecorder (.tinyrec), TinyTask (.rec), or text (.txt) macro"
+        imp.toolTip = L10n.text("Import a TinyRecorder (.tinyrec), TinyTask (.rec), or text (.txt) macro")
         fileMenu.addItem(imp)
-        let exp = NSMenuItem(title: "Export as Shell Script…", action: #selector(exportMacro(_:)), keyEquivalent: "e")
+        let exp = NSMenuItem(title: L10n.text("Export as Shell Script…"), action: #selector(exportMacro(_:)), keyEquivalent: "e")
         exp.target = self
         fileMenu.addItem(exp)
-        let expText = NSMenuItem(title: "Export as Text…", action: #selector(exportText(_:)), keyEquivalent: "e")
+        let expText = NSMenuItem(title: L10n.text("Export as Text…"), action: #selector(exportText(_:)), keyEquivalent: "e")
         expText.keyEquivalentModifierMask = [.command, .shift]
         expText.target = self
         fileMenu.addItem(expText)
         fileMenu.addItem(.separator())
-        let quickRun = NSMenuItem(title: "Quick Run…", action: #selector(showQuickRun(_:)), keyEquivalent: "k")
+        let quickRun = NSMenuItem(title: L10n.text("Quick Run…"), action: #selector(showQuickRun(_:)), keyEquivalent: "k")
         quickRun.target = self
         fileMenu.addItem(quickRun)
-        let search = NSMenuItem(title: "Search Library", action: #selector(focusLibrarySearch(_:)), keyEquivalent: "f")
+        let search = NSMenuItem(title: L10n.text("Search Library"), action: #selector(focusLibrarySearch(_:)), keyEquivalent: "f")
         search.target = self
         fileMenu.addItem(search)
         fileMenu.addItem(.separator())
         fileMenu.addItem(NSMenuItem(
-            title: "Close Window",
+            title: L10n.text("Close Window"),
             action: #selector(NSWindow.performClose(_:)),
             keyEquivalent: "w"
         ))
@@ -219,27 +219,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // — Edit menu — standard Cocoa items (Undo/Redo come from responder chain)
         let editItem = NSMenuItem()
-        let editMenu = NSMenu(title: "Edit")
-        editMenu.addItem(NSMenuItem(title: "Undo", action: Selector(("undo:")), keyEquivalent: "z"))
-        let redo = NSMenuItem(title: "Redo", action: Selector(("redo:")), keyEquivalent: "z")
+        let editMenu = NSMenu(title: L10n.text("Edit"))
+        editMenu.addItem(NSMenuItem(title: L10n.text("Undo"), action: Selector(("undo:")), keyEquivalent: "z"))
+        let redo = NSMenuItem(title: L10n.text("Redo"), action: Selector(("redo:")), keyEquivalent: "z")
         redo.keyEquivalentModifierMask = [.command, .shift]
         editMenu.addItem(redo)
         editMenu.addItem(.separator())
-        editMenu.addItem(NSMenuItem(title: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "x"))
-        editMenu.addItem(NSMenuItem(title: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c"))
-        editMenu.addItem(NSMenuItem(title: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v"))
-        editMenu.addItem(NSMenuItem(title: "Delete", action: #selector(NSText.delete(_:)), keyEquivalent: ""))
-        editMenu.addItem(NSMenuItem(title: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a"))
+        editMenu.addItem(NSMenuItem(title: L10n.text("Cut"), action: #selector(NSText.cut(_:)), keyEquivalent: "x"))
+        editMenu.addItem(NSMenuItem(title: L10n.text("Copy"), action: #selector(NSText.copy(_:)), keyEquivalent: "c"))
+        editMenu.addItem(NSMenuItem(title: L10n.text("Paste"), action: #selector(NSText.paste(_:)), keyEquivalent: "v"))
+        editMenu.addItem(NSMenuItem(title: L10n.text("Delete"), action: #selector(NSText.delete(_:)), keyEquivalent: ""))
+        editMenu.addItem(NSMenuItem(title: L10n.text("Select All"), action: #selector(NSText.selectAll(_:)), keyEquivalent: "a"))
         editItem.submenu = editMenu
         main.addItem(editItem)
 
         // — Macro menu —
         let macroItem = NSMenuItem()
-        let macroMenu = NSMenu(title: "Macro")
-        let play = NSMenuItem(title: "Play", action: #selector(playMacro(_:)), keyEquivalent: "p")
+        let macroMenu = NSMenu(title: L10n.text("Macro"))
+        let play = NSMenuItem(title: L10n.text("Play"), action: #selector(playMacro(_:)), keyEquivalent: "p")
         play.target = self
         macroMenu.addItem(play)
-        let openEdit = NSMenuItem(title: "Open Editor…", action: #selector(openEditor(_:)), keyEquivalent: "e")
+        let openEdit = NSMenuItem(title: L10n.text("Open Editor…"), action: #selector(openEditor(_:)), keyEquivalent: "e")
         openEdit.keyEquivalentModifierMask = [.command, .option]
         openEdit.target = self
         macroMenu.addItem(openEdit)
@@ -248,24 +248,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // — Window menu —
         let windowItem = NSMenuItem()
-        let windowMenu = NSMenu(title: "Window")
+        let windowMenu = NSMenu(title: L10n.text("Window"))
         windowMenu.addItem(NSMenuItem(
-            title: "Minimize",
+            title: L10n.text("Minimize"),
             action: #selector(NSWindow.performMiniaturize(_:)),
             keyEquivalent: "m"
         ))
         windowMenu.addItem(NSMenuItem(
-            title: "Zoom",
+            title: L10n.text("Zoom"),
             action: #selector(NSWindow.performZoom(_:)),
             keyEquivalent: ""
         ))
         windowMenu.addItem(.separator())
-        let lib = NSMenuItem(title: "Library", action: #selector(showMainWindow(_:)), keyEquivalent: "0")
+        let lib = NSMenuItem(title: L10n.text("Library"), action: #selector(showMainWindow(_:)), keyEquivalent: "0")
         lib.target = self
         windowMenu.addItem(lib)
         windowMenu.addItem(.separator())
         windowMenu.addItem(NSMenuItem(
-            title: "Bring All to Front",
+            title: L10n.text("Bring All to Front"),
             action: #selector(NSApplication.arrangeInFront(_:)),
             keyEquivalent: ""
         ))
@@ -274,9 +274,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // — Help menu —
         let helpItem = NSMenuItem()
-        let helpMenu = NSMenu(title: "Help")
+        let helpMenu = NSMenu(title: L10n.text("Help"))
         let help = NSMenuItem(
-            title: "TinyRecorder Help",
+            title: L10n.text("TinyRecorder Help"),
             action: #selector(AppDelegate.showHelp(_:)),
             keyEquivalent: "?"
         )

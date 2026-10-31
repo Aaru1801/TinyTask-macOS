@@ -76,7 +76,7 @@ struct QuickRunPalette: View {
         }
         .onExitCommand(perform: onDismiss)
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("Quick Run")
+        .accessibilityLabel(L10n.text("Quick Run"))
     }
 
     private var searchHeader: some View {
@@ -87,7 +87,7 @@ struct QuickRunPalette: View {
                 .frame(width: 22)
                 .accessibilityHidden(true)
 
-            TextField("Search macros and commands", text: $query)
+            TextField(L10n.text("Search macros and commands"), text: $query)
                 .textFieldStyle(.plain)
                 .font(.system(size: compact ? 14 : 15))
                 .focused($queryFocused)
@@ -107,7 +107,7 @@ struct QuickRunPalette: View {
                         .foregroundStyle(.tertiary)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Clear Quick Run search")
+                .accessibilityLabel(L10n.text("Clear Quick Run search"))
             }
 
             KeyCapView(text: "esc", size: .sm)
@@ -124,11 +124,11 @@ struct QuickRunPalette: View {
                     .font(.system(size: 24, weight: .regular))
                     .foregroundStyle(.tertiary)
                     .padding(.bottom, 4)
-                Text("No match for “\(query)”")
+                Text(L10n.text("No match for “%@”", String(describing: query)))
                     .font(.system(size: 13, weight: .semibold))
                     .lineLimit(2)
                     .multilineTextAlignment(.center)
-                Text("Try a macro name, tag, or command.")
+                Text(L10n.text("Try a macro name, tag, or command."))
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)
             }
@@ -216,10 +216,10 @@ struct QuickRunPalette: View {
 
     private var keyboardFooter: some View {
         HStack(spacing: 12) {
-            keyboardHint("↑↓", "Navigate")
-            keyboardHint("↵", "Run")
+            keyboardHint("↑↓", L10n.text("Navigate"))
+            keyboardHint("↵", L10n.text("Run"))
             Spacer()
-            Text(query.isEmpty ? "Recent & favorites" : "Search results")
+            Text(query.isEmpty ? L10n.text("Recent & favorites") : L10n.text("Search results"))
                 .font(.system(size: 10))
                 .foregroundStyle(.secondary)
         }
@@ -263,7 +263,7 @@ struct QuickRunPalette: View {
             Entry(
                 id: "macro-\(macro.id.uuidString)",
                 title: macro.name,
-                subtitle: "\(macro.eventCount) events · \(quickDuration(macro.duration))" +
+                subtitle: L10n.text("%@ events · %@", String(describing: macro.eventCount), String(describing: quickDuration(macro.duration))) +
                     (macro.tags.isEmpty ? "" : " · \(macro.tags.prefix(2).joined(separator: ", "))"),
                 symbol: macro.icon ?? "wave.3.right",
                 tint: cardAccentColor(for: macro.accent),
@@ -286,8 +286,8 @@ struct QuickRunPalette: View {
         var commands: [Entry] = [
             Entry(
                 id: "command-record",
-                title: state.recordingCountdownActive ? "Cancel Recording" : (recorder.isRecording ? "Stop & Save Recording" : "Start Recording"),
-                subtitle: recorder.isRecording ? "Finish the live capture safely" : "Capture mouse and keyboard input",
+                title: state.recordingCountdownActive ? L10n.text("Cancel Recording") : (recorder.isRecording ? L10n.text("Stop & Save Recording") : L10n.text("Start Recording")),
+                subtitle: recorder.isRecording ? L10n.text("Finish the live capture safely") : L10n.text("Capture mouse and keyboard input"),
                 symbol: recorder.isRecording ? "stop.fill" : "record.circle",
                 tint: Brand.red500,
                 action: .record,
@@ -295,8 +295,8 @@ struct QuickRunPalette: View {
             ),
             Entry(
                 id: "command-import",
-                title: "Import Macro…",
-                subtitle: "TinyRecorder, TinyTask, JSON, or text",
+                title: L10n.text("Import Macro…"),
+                subtitle: L10n.text("TinyRecorder, TinyTask, JSON, or text"),
                 symbol: "square.and.arrow.down",
                 tint: .secondary,
                 action: .importFile,
@@ -306,8 +306,8 @@ struct QuickRunPalette: View {
         if player.isPlaying || !recorder.events.isEmpty {
             commands.insert(Entry(
                 id: "command-play",
-                title: player.isPlaying ? "Stop Playback" : "Play Current Macro",
-                subtitle: library.currentMacro?.name ?? "Replay the current event buffer",
+                title: player.isPlaying ? L10n.text("Stop Playback") : L10n.text("Play Current Macro"),
+                subtitle: library.currentMacro?.name ?? L10n.text("Replay the current event buffer"),
                 symbol: player.isPlaying ? "stop.fill" : "play.fill",
                 tint: player.isPlaying ? Brand.red500 : .secondary,
                 action: .play,
@@ -317,8 +317,8 @@ struct QuickRunPalette: View {
         if library.currentMacro != nil {
             commands.append(Entry(
                 id: "command-edit",
-                title: "Open Current in Editor",
-                subtitle: library.currentMacro?.name ?? "Current macro",
+                title: L10n.text("Open Current in Editor"),
+                subtitle: library.currentMacro?.name ?? L10n.text("Current macro"),
                 symbol: "slider.horizontal.below.rectangle",
                 tint: .secondary,
                 action: .edit,
@@ -327,8 +327,8 @@ struct QuickRunPalette: View {
         }
         commands.append(Entry(
             id: "command-settings",
-            title: "Settings…",
-            subtitle: "Hotkeys, capture, playback, and appearance",
+            title: L10n.text("Settings…"),
+            subtitle: L10n.text("Hotkeys, capture, playback, and appearance"),
             symbol: "gearshape.fill",
             tint: .secondary,
             action: .settings,
@@ -391,8 +391,8 @@ struct QuickRunPalette: View {
 
     private func quickDuration(_ seconds: TimeInterval) -> String {
         let safe = max(0, seconds.isFinite ? seconds : 0)
-        if safe < 10 { return String(format: "%.1fs", safe) }
-        if safe < 60 { return "\(Int(safe.rounded()))s" }
+        if safe < 10 { return L10n.text("%.1fs", safe) }
+        if safe < 60 { return L10n.text("%@s", String(describing: Int(safe.rounded()))) }
         return String(format: "%d:%02d", Int(safe) / 60, Int(safe) % 60)
     }
 }

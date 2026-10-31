@@ -61,7 +61,7 @@ final class SettingsWindowController: NSWindowController {
                 .environmentObject(controller.library)
         )
         let win = NSWindow(contentViewController: host)
-        win.title = "Settings"
+        win.title = L10n.text("Settings")
         win.styleMask = [.titled, .closable]
         win.isReleasedWhenClosed = false
         let settingsSize = NSSize(width: 580, height: 430)
