@@ -11,8 +11,8 @@ struct MacroImportResult {
     var warning: String?     // non-fatal note to surface to the user
 
     var summary: String {
-        var s = "\(events.count) event\(events.count == 1 ? "" : "s")"
-        if skipped > 0 { s += " · \(skipped) skipped" }
+        var s = L10n.count("imported_events", events.count)
+        if skipped > 0 { s += L10n.text(" · %@ skipped", String(describing: skipped)) }
         return s
     }
 }
@@ -25,9 +25,9 @@ enum MacroImportError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .empty: return "The file is empty."
-        case .notRecFormat(let why): return "Not a recognized TinyTask .rec file: \(why)"
-        case .notTextFormat(let why): return "Not a recognized macro text file: \(why)"
+        case .empty: return L10n.text("The file is empty.")
+        case .notRecFormat(let why): return L10n.text("Not a recognized TinyTask .rec file: %@", String(describing: why))
+        case .notTextFormat(let why): return L10n.text("Not a recognized macro text file: %@", String(describing: why))
         case .unreadable(let why): return why
         }
     }
@@ -161,7 +161,7 @@ enum TinyTaskImporter {
         guard !data.isEmpty else { throw MacroImportError.empty }
         guard data.count % recordSize == 0 else {
             throw MacroImportError.notRecFormat(
-                "length \(data.count) is not a multiple of \(recordSize) bytes.")
+                L10n.text("length %@ is not a multiple of %@ bytes.", String(describing: data.count), String(describing: recordSize)))
         }
 
         let recordCount = data.count / recordSize
@@ -180,7 +180,7 @@ enum TinyTaskImporter {
         }
         if recordCount > 0, Double(badHighWord) / Double(recordCount) > 0.5 {
             throw MacroImportError.notRecFormat(
-                "the data does not look like TinyTask EVENTMSG records.")
+                L10n.text("the data does not look like TinyTask EVENTMSG records."))
         }
 
         var events: [RecordedEvent] = []
@@ -263,12 +263,12 @@ enum TinyTaskImporter {
         }
 
         guard !events.isEmpty else {
-            throw MacroImportError.notRecFormat("no playable events were found (\(skipped) records skipped).")
+            throw MacroImportError.notRecFormat(L10n.text("no playable events were found (%@ records skipped).", String(describing: skipped)))
         }
 
         var warning: String?
         if recordCount > 0, Double(skipped) / Double(recordCount) > 0.05 {
-            warning = "\(skipped) of \(recordCount) records were skipped — this file may be from an unsupported TinyTask version."
+            warning = L10n.text("%@ of %@ records were skipped — this file may be from an unsupported TinyTask version.", String(describing: skipped), String(describing: recordCount))
         }
         return MacroImportResult(events: events, parsed: events.count, skipped: skipped, warning: warning)
     }

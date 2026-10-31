@@ -17,7 +17,7 @@ final class WelcomeWindowController: NSWindowController, NSWindowDelegate {
                 .frame(width: 560, height: 520)
         )
         let win = NSWindow(contentViewController: host)
-        win.title = "Welcome to TinyRecorder"
+        win.title = L10n.text("Welcome to TinyRecorder")
         win.setContentSize(NSSize(width: 560, height: 520))
         win.styleMask = [.titled, .closable, .fullSizeContentView]
         win.titlebarAppearsTransparent = true
@@ -100,7 +100,7 @@ private struct WelcomeView: View {
                 // Bottom controls
                 HStack {
                     if step != .welcome {
-                        Button("Back") { withAnimation(.spring(response: 0.4)) { step = Step(rawValue: step.rawValue - 1) ?? .welcome } }
+                        Button(L10n.text("Back")) { withAnimation(.spring(response: 0.4)) { step = Step(rawValue: step.rawValue - 1) ?? .welcome } }
                             .buttonStyle(.bordered)
                             .controlSize(.large)
                             .interactiveLift3D(intensity: 0.66, cornerRadius: 9)
@@ -110,7 +110,7 @@ private struct WelcomeView: View {
                         Button {
                             onDone()
                         } label: {
-                            Text("Get Started").frame(minWidth: 140)
+                            Text(L10n.text("Get Started")).frame(minWidth: 140)
                         }
                         .keyboardShortcut(.defaultAction)
                         .buttonStyle(.borderedProminent)
@@ -121,7 +121,7 @@ private struct WelcomeView: View {
                         // Never trap the user: permissions can be skipped and
                         // granted later from Settings.
                         if step == .permissions && !(accessibility && inputMonitoring) {
-                            Button("Skip for Now") {
+                            Button(L10n.text("Skip for Now")) {
                                 withAnimation(.spring(response: 0.4)) { step = .hotkeys }
                             }
                             .buttonStyle(.bordered)
@@ -153,10 +153,10 @@ private struct WelcomeView: View {
 
     private var nextLabel: String {
         switch step {
-        case .welcome:     return "Next"
-        case .permissions: return (accessibility && inputMonitoring) ? "Continue" : "Waiting…"
-        case .hotkeys:     return "Next"
-        case .ready:       return "Get Started"
+        case .welcome:     return L10n.text("Next")
+        case .permissions: return (accessibility && inputMonitoring) ? L10n.text("Continue") : L10n.text("Waiting…")
+        case .hotkeys:     return L10n.text("Next")
+        case .ready:       return L10n.text("Get Started")
         }
     }
 
@@ -185,9 +185,9 @@ private struct WelcomeStep: View {
                 .animation(.spring(response: 0.6, dampingFraction: 0.55).delay(0.1), value: bounce)
                 .onAppear { bounce = true }
 
-            Text("Welcome to TinyRecorder")
+            Text(L10n.text("Welcome to TinyRecorder"))
                 .font(.system(size: 26, weight: .bold))
-            Text("The little macro recorder for macOS that's quietly doing your repetitive work.")
+            Text(L10n.text("The little macro recorder for macOS that's quietly doing your repetitive work."))
                 .font(.system(size: 13))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -195,14 +195,14 @@ private struct WelcomeStep: View {
 
             VStack(alignment: .leading, spacing: 12) {
                 FeatureRow(icon: "wave.3.right", tint: .red,
-                           title: "Capture anything",
-                           subtitle: "Mouse clicks, drags, scrolls, and the keyboard.")
+                           title: L10n.text("Capture anything"),
+                           subtitle: L10n.text("Mouse clicks, drags, scrolls, and the keyboard."))
                 FeatureRow(icon: "infinity", tint: .green,
-                           title: "Replay on demand",
-                           subtitle: "Once, N times, or forever — at any speed.")
+                           title: L10n.text("Replay on demand"),
+                           subtitle: L10n.text("Once, N times, or forever — at any speed."))
                 FeatureRow(icon: "keyboard", tint: .blue,
-                           title: "Trigger from anywhere",
-                           subtitle: "Assign a global hotkey to any macro.")
+                           title: L10n.text("Trigger from anywhere"),
+                           subtitle: L10n.text("Assign a global hotkey to any macro."))
             }
             .padding(16)
             .frame(maxWidth: 420)
@@ -229,9 +229,9 @@ private struct PermissionsStep: View {
                 .font(.system(size: 56, weight: .light))
                 .foregroundStyle(.tint)
 
-            Text("Two quick permissions")
+            Text(L10n.text("Two quick permissions"))
                 .font(.system(size: 22, weight: .bold))
-            Text("macOS requires explicit consent to capture and post input events. We never see what you type or click outside of recordings you initiate.")
+            Text(L10n.text("macOS requires explicit consent to capture and post input events. Input is saved only during recordings you initiate. During playback, input is monitored only to stop the macro."))
                 .font(.system(size: 12))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -239,14 +239,14 @@ private struct PermissionsStep: View {
 
             VStack(spacing: 10) {
                 PermissionCard(
-                    title: "Accessibility",
-                    subtitle: "Required to play back your recordings.",
+                    title: L10n.text("Accessibility"),
+                    subtitle: L10n.text("Required to play back your recordings."),
                     granted: accessibility,
                     action: { controller.openAccessibilityPrefs() }
                 )
                 PermissionCard(
-                    title: "Input Monitoring",
-                    subtitle: "Required to record your inputs.",
+                    title: L10n.text("Input Monitoring"),
+                    subtitle: L10n.text("Required to record your inputs."),
                     granted: inputMonitoring,
                     action: { controller.openInputMonitoringPrefs() }
                 )
@@ -265,22 +265,22 @@ private struct HotkeysStep: View {
                 .font(.system(size: 56, weight: .light))
                 .foregroundStyle(.tint)
 
-            Text("Global hotkeys")
+            Text(L10n.text("Global hotkeys"))
                 .font(.system(size: 22, weight: .bold))
-            Text("Trigger recording, stop, and play from any app — without bringing TinyRecorder to the front. You can change these in Preferences.")
+            Text(L10n.text("Trigger recording, stop, and play from any app — without bringing TinyRecorder to the front. You can change these in Preferences."))
                 .font(.system(size: 12))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 440)
 
             VStack(spacing: 10) {
-                HotkeyExplain(label: "Record / Stop", binding: controller.state.recordHotkey, tint: .red, systemImage: "record.circle")
-                HotkeyExplain(label: "Stop everything", binding: controller.state.stopHotkey, tint: .orange, systemImage: "stop.circle")
-                HotkeyExplain(label: "Play current", binding: controller.state.playHotkey, tint: .green, systemImage: "play.circle")
+                HotkeyExplain(label: L10n.text("Record / Stop"), binding: controller.state.recordHotkey, tint: .red, systemImage: "record.circle")
+                HotkeyExplain(label: L10n.text("Stop everything"), binding: controller.state.stopHotkey, tint: .orange, systemImage: "stop.circle")
+                HotkeyExplain(label: L10n.text("Play current"), binding: controller.state.playHotkey, tint: .green, systemImage: "play.circle")
             }
             .frame(maxWidth: 440)
 
-            Text("Pro tip: each saved macro can also have its OWN hotkey from the card menu — set one and that macro plays from anywhere.")
+            Text(L10n.text("Pro tip: each saved macro can also have its OWN hotkey from the card menu — set one and that macro plays from anywhere."))
                 .font(.system(size: 11))
                 .foregroundStyle(.tertiary)
                 .multilineTextAlignment(.center)
@@ -297,9 +297,9 @@ private struct ReadyStep: View {
     private var countdownSentence: String {
         let secs = controller.state.countdownSeconds
         if secs > 0 {
-            return "Click the menu-bar icon or this Dock icon to open the library. Press Record to capture your first macro — TinyRecorder will count down \(secs) second\(secs == 1 ? "" : "s") before it starts so you have time to switch to the right window."
+            return L10n.count("welcome_countdown", secs)
         }
-        return "Click the menu-bar icon or this Dock icon to open the library. Press Record to capture your first macro — recording starts immediately."
+        return L10n.text("Click the menu-bar icon or this Dock icon to open the library. Press Record to capture your first macro — recording starts immediately.")
     }
 
     var body: some View {
@@ -313,7 +313,7 @@ private struct ReadyStep: View {
                     .font(.system(size: 38, weight: .heavy))
                     .foregroundStyle(.white)
             }
-            Text("You're all set")
+            Text(L10n.text("You're all set"))
                 .font(.system(size: 22, weight: .bold))
             Text(countdownSentence)
                 .font(.system(size: 12))
@@ -323,15 +323,15 @@ private struct ReadyStep: View {
 
             HStack(spacing: 8) {
                 KeyCapView(text: controller.state.recordHotkey.name)
-                Text("to record · ")
+                Text(L10n.text("to record · "))
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
                 KeyCapView(text: controller.state.playHotkey.name)
-                Text("to play · ")
+                Text(L10n.text("to play · "))
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
                 KeyCapView(text: controller.state.stopHotkey.name)
-                Text("to stop")
+                Text(L10n.text("to stop"))
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
             }
@@ -404,7 +404,7 @@ private struct PermissionCard: View {
                 Text(subtitle).font(.system(size: 11)).foregroundStyle(.secondary)
             }
             Spacer()
-            Button(granted ? "Granted" : "Open Settings", action: action)
+            Button(granted ? L10n.text("Granted") : L10n.text("Open Settings"), action: action)
                 .controlSize(.small)
                 .disabled(granted)
                 .interactiveLift3D(intensity: 0.58, cornerRadius: 7)

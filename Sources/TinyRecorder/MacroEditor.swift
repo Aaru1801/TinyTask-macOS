@@ -8,7 +8,7 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate {
     init<V: View>(rootView: V) {
         let host = NSHostingController(rootView: rootView)
         let win = NSWindow(contentViewController: host)
-        win.title = "Macro Editor"
+        win.title = L10n.text("Macro Editor")
         win.setContentSize(NSSize(width: 820, height: 580))
         win.styleMask = [.titled, .closable, .resizable, .miniaturizable, .fullSizeContentView]
         win.minSize = NSSize(width: 680, height: 460)
@@ -163,16 +163,16 @@ private struct EditorToolbar: View {
                 BrandMark(size: 32)
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(macro?.name ?? "Untitled macro")
+                    Text(macro?.name ?? L10n.text("Untitled macro"))
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(.primary)
                     HStack(spacing: 6) {
-                        Label("\(rowCount) events", systemImage: "wave.3.right")
+                        Label(L10n.text("%@ events", String(describing: rowCount)), systemImage: "wave.3.right")
                         Text("·").foregroundStyle(.tertiary)
                         Label(formatDuration(duration), systemImage: "clock")
                         if let m = macro {
                             Text("·").foregroundStyle(.tertiary)
-                            Text("edited \(RelativeTime.string(from: m.modifiedAt))")
+                            Text(L10n.text("edited %@", String(describing: RelativeTime.string(from: m.modifiedAt))))
                         }
                     }
                     .font(.system(size: 10.5))
@@ -184,7 +184,7 @@ private struct EditorToolbar: View {
 
                 // Hide mouse moves switch
                 Toggle(isOn: $hideMouseMoves) {
-                    Label("Hide mouse moves", systemImage: "eye.slash.fill")
+                    Label(L10n.text("Hide mouse moves"), systemImage: "eye.slash.fill")
                         .font(.system(size: 11, weight: .medium))
                 }
                 .toggleStyle(.switch)
@@ -193,19 +193,19 @@ private struct EditorToolbar: View {
 
                 // Export
                 Button(action: onExport) {
-                    Label("Export Shell Script…", systemImage: "square.and.arrow.up")
+                    Label(L10n.text("Export Shell Script…"), systemImage: "square.and.arrow.up")
                         .font(.system(size: 11.5, weight: .medium))
                 }
                 .controlSize(.regular)
                 .buttonStyle(.bordered)
-                .help("Exports a double-clickable .command script")
+                .help(L10n.text("Exports a double-clickable .command script"))
                 .interactiveLift3D(intensity: 0.62, cornerRadius: 8)
 
                 // Play / Stop
                 Button {
                     playing ? onStop() : onPlay()
                 } label: {
-                    Label(playing ? "Stop" : "Play",
+                    Label(playing ? L10n.text("Stop") : L10n.text("Play"),
                           systemImage: playing ? "stop.fill" : "play.fill")
                         .font(.system(size: 11.5, weight: .semibold))
                 }
@@ -250,15 +250,15 @@ private struct EditorTimeline: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("TIMELINE")
+                Text(L10n.text("TIMELINE"))
                     .font(.system(size: 9.5, weight: .semibold))
                     .tracking(0.7)
                     .foregroundStyle(.secondary)
                 Spacer()
-                LegendChip(label: "Key",    tint: Brand.sigBlue)
-                LegendChip(label: "Click",  tint: Brand.sigGreen)
-                LegendChip(label: "Scroll", tint: Brand.sigTeal)
-                LegendChip(label: "Drag",   tint: Brand.sigViolet)
+                LegendChip(label: L10n.text("Key"),    tint: Brand.sigBlue)
+                LegendChip(label: L10n.text("Click"),  tint: Brand.sigGreen)
+                LegendChip(label: L10n.text("Scroll"), tint: Brand.sigTeal)
+                LegendChip(label: L10n.text("Drag"),   tint: Brand.sigViolet)
             }
 
             GeometryReader { geo in
@@ -376,7 +376,7 @@ private struct EditorTimeline: View {
                     .padding(.horizontal, 8).padding(.vertical, 3)
                     .background(Capsule().fill(Color.red.opacity(0.12)))
                 }
-                Text("Drag on timeline to select a range · ⌥-drag to extend")
+                Text(L10n.text("Drag on timeline to select a range · ⌥-drag to extend"))
                     .font(.system(size: 10))
                     .foregroundStyle(.secondary)
                 Spacer()
@@ -453,9 +453,9 @@ private struct EditorSidebar: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
-                section("Selection", icon: "checklist") {
+                section(L10n.text("Selection"), icon: "checklist") {
                     Button(action: deleteSelected) {
-                        Label("Delete selected", systemImage: "trash")
+                        Label(L10n.text("Delete selected"), systemImage: "trash")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.bordered)
@@ -465,17 +465,17 @@ private struct EditorSidebar: View {
 
                     HStack(spacing: 6) {
                         Button(action: trimBefore) {
-                            Label("Trim before", systemImage: "arrow.left.to.line")
+                            Label(L10n.text("Trim before"), systemImage: "arrow.left.to.line")
                         }
                         .frame(maxWidth: .infinity)
-                        .help("Delete every event before the selected one")
+                        .help(L10n.text("Delete every event before the selected one"))
                         .interactiveLift3D(intensity: 0.50, cornerRadius: 7)
 
                         Button(action: trimAfter) {
-                            Label("Trim after", systemImage: "arrow.right.to.line")
+                            Label(L10n.text("Trim after"), systemImage: "arrow.right.to.line")
                         }
                         .frame(maxWidth: .infinity)
-                        .help("Delete every event after the selected one")
+                        .help(L10n.text("Delete every event after the selected one"))
                         .interactiveLift3D(intensity: 0.50, cornerRadius: 7)
                     }
                     .controlSize(.small)
@@ -484,7 +484,7 @@ private struct EditorSidebar: View {
                     Button(role: .destructive) {
                         confirmClearAll = true
                     } label: {
-                        Label("Clear all", systemImage: "trash.slash")
+                        Label(L10n.text("Clear all"), systemImage: "trash.slash")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.bordered)
@@ -492,20 +492,20 @@ private struct EditorSidebar: View {
                     .disabled(rows.isEmpty)
                     .interactiveLift3D(intensity: 0.54, cornerRadius: 7)
                     .confirmationDialog(
-                        "Remove all events from this macro?",
+                        L10n.text("Remove all events from this macro?"),
                         isPresented: $confirmClearAll,
                         titleVisibility: .visible
                     ) {
-                        Button("Clear All Events", role: .destructive) { clearAll() }
-                        Button("Cancel", role: .cancel) {}
+                        Button(L10n.text("Clear All Events"), role: .destructive) { clearAll() }
+                        Button(L10n.text("Cancel"), role: .cancel) {}
                     } message: {
-                        Text("You can undo this with ⌘Z while the editor is open.")
+                        Text(L10n.text("You can undo this with ⌘Z while the editor is open."))
                     }
                 }
 
-                section("Time stretch", icon: "speedometer") {
+                section(L10n.text("Time stretch"), icon: "speedometer") {
                     Slider(value: $stretchFactor, in: 0.25...4.0, step: 0.05) {
-                        Text("Stretch")
+                        Text(L10n.text("Stretch"))
                     } minimumValueLabel: {
                         Text("0.25×").font(.system(size: 9))
                     } maximumValueLabel: {
@@ -518,16 +518,16 @@ private struct EditorSidebar: View {
                         Text(String(format: "%.2f×", stretchFactor))
                             .font(.system(.body, design: .monospaced).weight(.semibold))
                         Spacer()
-                        Button("Reset") { stretchFactor = 1.0 }
+                        Button(L10n.text("Reset")) { stretchFactor = 1.0 }
                             .buttonStyle(.borderless)
                             .controlSize(.small)
                             .interactiveLift3D(intensity: 0.44, cornerRadius: 6)
                     }
-                    Text("> 1× slower · < 1× faster.")
+                    Text(L10n.text("> 1× slower · < 1× faster."))
                         .font(.system(size: 10))
                         .foregroundStyle(.secondary)
                     Button(action: applyStretch) {
-                        Label("Apply to all events", systemImage: "checkmark")
+                        Label(L10n.text("Apply to all events"), systemImage: "checkmark")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
@@ -536,17 +536,17 @@ private struct EditorSidebar: View {
                     .interactiveLift3D(intensity: 0.60, cornerRadius: 7)
                 }
 
-                section("Insert wait", icon: "hourglass") {
+                section(L10n.text("Insert wait"), icon: "hourglass") {
                     Stepper(value: $insertWaitMs, in: 50...60000, step: 100) {
-                        Text("\(Int(insertWaitMs)) ms")
+                        Text(L10n.text("%@ ms", String(describing: Int(insertWaitMs))))
                             .font(.system(.body, design: .monospaced).weight(.semibold))
                     }
                     .controlSize(.small)
-                    Text("Adds a pause at the selected position (or end if none selected).")
+                    Text(L10n.text("Adds a pause at the selected position (or end if none selected)."))
                         .font(.system(size: 10))
                         .foregroundStyle(.secondary)
                     Button(action: insertWait) {
-                        Label("Insert wait", systemImage: "hourglass.bottomhalf.filled")
+                        Label(L10n.text("Insert wait"), systemImage: "hourglass.bottomhalf.filled")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
@@ -555,22 +555,22 @@ private struct EditorSidebar: View {
                     .interactiveLift3D(intensity: 0.60, cornerRadius: 7)
                 }
 
-                section("Shift selected", icon: "arrow.left.and.right") {
+                section(L10n.text("Shift selected"), icon: "arrow.left.and.right") {
                     Stepper(value: $shiftMs, in: 1...10000, step: 50) {
-                        Text("\(Int(shiftMs)) ms")
+                        Text(L10n.text("%@ ms", String(describing: Int(shiftMs))))
                             .font(.system(.body, design: .monospaced).weight(.semibold))
                     }
                     .controlSize(.small)
 
                     HStack(spacing: 6) {
                         Button { shiftSelection(by: -shiftMs / 1000.0) } label: {
-                            Label("Earlier", systemImage: "minus")
+                            Label(L10n.text("Earlier"), systemImage: "minus")
                         }
                         .frame(maxWidth: .infinity)
                         .interactiveLift3D(intensity: 0.50, cornerRadius: 7)
 
                         Button { shiftSelection(by:  shiftMs / 1000.0) } label: {
-                            Label("Later", systemImage: "plus")
+                            Label(L10n.text("Later"), systemImage: "plus")
                         }
                         .frame(maxWidth: .infinity)
                         .interactiveLift3D(intensity: 0.50, cornerRadius: 7)
@@ -579,7 +579,7 @@ private struct EditorSidebar: View {
                     .disabled(selection.isEmpty)
                 }
 
-                section("Inspector", icon: "info.circle") {
+                section(L10n.text("Inspector"), icon: "info.circle") {
                     if selection.count == 1, let id = selection.first,
                        recorder.events.indices.contains(id) {
                         let ev = recorder.events[id]
@@ -588,7 +588,7 @@ private struct EditorSidebar: View {
                                 .foregroundStyle(kindColor(ev.kind))
                                 .font(.system(size: 12))
                             VStack(alignment: .leading, spacing: 0) {
-                                Text("Event #\(id + 1)")
+                                Text(L10n.text("Event #%@", String(describing: id + 1)))
                                     .font(.system(size: 11, weight: .semibold))
                                 Text(humanKindName(ev.kind))
                                     .font(.system(size: 10))
@@ -596,7 +596,7 @@ private struct EditorSidebar: View {
                             }
                         }
 
-                        labeledField("Time (s)", text: $inspTime)
+                        labeledField(L10n.text("Time (s)"), text: $inspTime)
                         if ev.kind.isMouse {
                             HStack(spacing: 6) {
                                 labeledField("X", text: $inspX)
@@ -604,16 +604,16 @@ private struct EditorSidebar: View {
                             }
                         }
                         if ev.kind.isKey {
-                            labeledField("Key code", text: $inspKey)
+                            labeledField(L10n.text("Key code"), text: $inspKey)
                             if let name = keyName(UInt16(inspKey) ?? ev.keyCode) {
-                                Text("Key: \(name)")
+                                Text(L10n.text("Key: %@", String(describing: name)))
                                     .font(.system(size: 10, weight: .medium))
                                     .foregroundStyle(.secondary)
                             }
                         }
 
                         Button(action: applyInspector) {
-                            Label("Apply changes", systemImage: "checkmark.circle.fill")
+                            Label(L10n.text("Apply changes"), systemImage: "checkmark.circle.fill")
                                 .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(.borderedProminent)
@@ -622,14 +622,14 @@ private struct EditorSidebar: View {
                     } else if selection.count > 1 {
                         emptyInspector(
                             icon: "square.stack",
-                            title: "\(selection.count) events selected",
-                            subtitle: "Select one event to edit fields"
+                            title: L10n.text("%@ events selected", String(describing: selection.count)),
+                            subtitle: L10n.text("Select one event to edit fields")
                         )
                     } else {
                         emptyInspector(
                             icon: "hand.tap",
-                            title: "No selection",
-                            subtitle: "Click a row to inspect or edit"
+                            title: L10n.text("No selection"),
+                            subtitle: L10n.text("Click a row to inspect or edit")
                         )
                     }
                 }
@@ -698,14 +698,14 @@ private struct EditorSidebar: View {
     private func deleteSelected() {
         let idx = IndexSet(selection)
         selection.removeAll()
-        withUndo("Delete Events") {
+        withUndo(L10n.text("Delete Events")) {
             recorder.deleteEvents(at: idx)
         }
     }
 
     private func trimBefore() {
         guard selection.count == 1, let id = selection.first else { return }
-        withUndo("Trim Before") {
+        withUndo(L10n.text("Trim Before")) {
             recorder.trimBefore(index: id)
         }
         selection = recorder.events.isEmpty ? [] : [0]
@@ -713,7 +713,7 @@ private struct EditorSidebar: View {
 
     private func trimAfter() {
         guard selection.count == 1, let id = selection.first else { return }
-        withUndo("Trim After") {
+        withUndo(L10n.text("Trim After")) {
             recorder.trimAfter(index: id)
         }
         selection = recorder.events.indices.contains(id) ? [id] : []
@@ -721,7 +721,7 @@ private struct EditorSidebar: View {
 
     private func clearAll() {
         selection.removeAll()
-        withUndo("Clear All Events") {
+        withUndo(L10n.text("Clear All Events")) {
             recorder.clearAll()
         }
     }
@@ -733,20 +733,20 @@ private struct EditorSidebar: View {
         } else {
             idx = recorder.events.count
         }
-        withUndo("Insert Wait") {
+        withUndo(L10n.text("Insert Wait")) {
             recorder.insertWait(at: idx, milliseconds: insertWaitMs)
         }
     }
 
     private func applyStretch() {
-        withUndo("Time Stretch") {
+        withUndo(L10n.text("Time Stretch")) {
             recorder.scaleTime(by: stretchFactor)
         }
         stretchFactor = 1.0
     }
 
     private func shiftSelection(by delta: TimeInterval) {
-        withUndo("Shift Events") {
+        withUndo(L10n.text("Shift Events")) {
             recorder.shiftTime(of: IndexSet(selection), by: delta)
         }
     }
@@ -760,7 +760,7 @@ private struct EditorSidebar: View {
         if let y = Double(inspY) { ev.y = CGFloat(y) }
         if let k = UInt16(inspKey) { ev.keyCode = k }
         var newIndex: Int?
-        withUndo("Edit Event") {
+        withUndo(L10n.text("Edit Event")) {
             newIndex = recorder.updateEvent(at: id, with: ev)
         }
         // A time edit re-sorts the buffer — follow the event to its new slot
@@ -788,7 +788,7 @@ private struct EventTableView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 10) {
-                Text("EVENTS")
+                Text(L10n.text("EVENTS"))
                     .font(.system(size: 10.5, weight: .semibold))
                     .tracking(0.7)
                     .foregroundStyle(.secondary)
@@ -797,7 +797,7 @@ private struct EventTableView: View {
                     .foregroundStyle(.tertiary)
                 Spacer()
                 if !selection.isEmpty {
-                    Text("\(selection.count) selected")
+                    Text(L10n.text("%@ selected", String(describing: selection.count)))
                         .font(.system(size: 10.5, weight: .medium))
                         .foregroundStyle(Brand.red500)
                 }
@@ -834,10 +834,10 @@ private struct EventTableView: View {
     private var headerRow: some View {
         HStack(spacing: 0) {
             Text("#").frame(width: EventCol.num, alignment: .leading)
-            Text("TIME").frame(width: EventCol.time, alignment: .leading)
-            Text("TYPE").frame(maxWidth: .infinity, alignment: .leading)
-            Text("POSITION").frame(width: EventCol.pos, alignment: .leading)
-            Text("KEY").frame(width: EventCol.key, alignment: .leading)
+            Text(L10n.text("TIME")).frame(width: EventCol.time, alignment: .leading)
+            Text(L10n.text("TYPE")).frame(maxWidth: .infinity, alignment: .leading)
+            Text(L10n.text("POSITION")).frame(width: EventCol.pos, alignment: .leading)
+            Text(L10n.text("KEY")).frame(width: EventCol.key, alignment: .leading)
         }
         .font(.system(size: 9.5, weight: .semibold))
         .tracking(0.6)
@@ -876,7 +876,7 @@ private struct EventRowView: View {
                 .foregroundStyle(.tertiary)
                 .frame(width: EventCol.num, alignment: .leading)
 
-            Text(String(format: "%.3fs", e.time))
+            Text(L10n.text("%.3fs", e.time))
                 .font(.system(size: 11, design: .monospaced))
                 .foregroundStyle(.secondary)
                 .frame(width: EventCol.time, alignment: .leading)
@@ -948,16 +948,16 @@ private struct EditorFooter: View {
         VStack(spacing: 0) {
             Divider()
             HStack(spacing: 14) {
-                Label("\(eventCount) events", systemImage: "wave.3.right")
+                Label(L10n.text("%@ events", String(describing: eventCount)), systemImage: "wave.3.right")
                 Text("·").foregroundStyle(.tertiary)
                 Label(formatDuration(duration), systemImage: "clock")
                 if selectedCount > 0 {
                     Text("·").foregroundStyle(.tertiary)
-                    Label("\(selectedCount) selected", systemImage: "checkmark.circle.fill")
+                    Label(L10n.text("%@ selected", String(describing: selectedCount)), systemImage: "checkmark.circle.fill")
                         .foregroundStyle(.tint)
                 }
                 Spacer()
-                Text("Edits apply live · use Save to persist")
+                Text(L10n.text("Edits apply live · use Save to persist"))
                     .font(.system(size: 10))
                     .foregroundStyle(.tertiary)
             }
@@ -982,20 +982,20 @@ func formatDuration(_ d: TimeInterval) -> String {
 
 func humanKindName(_ k: RecordedEvent.Kind) -> String {
     switch k {
-    case .leftMouseDown:     return "Left Click ↓"
-    case .leftMouseUp:       return "Left Click ↑"
-    case .rightMouseDown:    return "Right Click ↓"
-    case .rightMouseUp:      return "Right Click ↑"
-    case .mouseMoved:        return "Mouse Move"
-    case .leftMouseDragged:  return "Left Drag"
-    case .rightMouseDragged: return "Right Drag"
-    case .otherMouseDown:    return "Other Click ↓"
-    case .otherMouseUp:      return "Other Click ↑"
-    case .otherMouseDragged: return "Other Drag"
-    case .keyDown:           return "Key Down"
-    case .keyUp:             return "Key Up"
-    case .flagsChanged:      return "Modifier"
-    case .scrollWheel:       return "Scroll"
+    case .leftMouseDown:     return L10n.text("Left Click ↓")
+    case .leftMouseUp:       return L10n.text("Left Click ↑")
+    case .rightMouseDown:    return L10n.text("Right Click ↓")
+    case .rightMouseUp:      return L10n.text("Right Click ↑")
+    case .mouseMoved:        return L10n.text("Mouse Move")
+    case .leftMouseDragged:  return L10n.text("Left Drag")
+    case .rightMouseDragged: return L10n.text("Right Drag")
+    case .otherMouseDown:    return L10n.text("Other Click ↓")
+    case .otherMouseUp:      return L10n.text("Other Click ↑")
+    case .otherMouseDragged: return L10n.text("Other Drag")
+    case .keyDown:           return L10n.text("Key Down")
+    case .keyUp:             return L10n.text("Key Up")
+    case .flagsChanged:      return L10n.text("Modifier")
+    case .scrollWheel:       return L10n.text("Scroll")
     }
 }
 
@@ -1026,7 +1026,7 @@ func keyName(_ code: UInt16) -> String? {
         38: "J", 40: "K",
         18: "1", 19: "2", 20: "3", 21: "4", 23: "5", 22: "6",
         26: "7", 28: "8", 25: "9", 29: "0",
-        49: "Space", 36: "Return", 48: "Tab", 51: "Delete", 53: "Escape",
+        49: L10n.text("Space"), 36: L10n.text("Return"), 48: "Tab", 51: L10n.text("Delete"), 53: L10n.text("Escape"),
         123: "←", 124: "→", 125: "↓", 126: "↑",
         96: "F5", 97: "F6", 98: "F7", 100: "F8", 101: "F9",
         103: "F11", 109: "F10", 111: "F12", 122: "F1", 120: "F2",

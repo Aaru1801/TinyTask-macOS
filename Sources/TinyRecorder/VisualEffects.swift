@@ -336,7 +336,7 @@ struct KeyCapView: View {
             .frame(minWidth: minW, minHeight: height)
             .padding(.horizontal, size == .lg ? 8 : (size == .sm ? 5 : 6))
             .background(background)
-            .accessibilityLabel("Shortcut \(text)")
+            .accessibilityLabel(L10n.text("Shortcut %@", text))
     }
 
     @ViewBuilder

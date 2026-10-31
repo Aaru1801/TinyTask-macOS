@@ -73,10 +73,10 @@ struct PopoverContentView: View {
                             Image(systemName: "arrow.down.doc.fill")
                                 .font(.system(size: 38, weight: .semibold))
                                 .foregroundStyle(.tint)
-                            Text("Drop to import")
+                            Text(L10n.text("Drop to import"))
                                 .font(.system(size: 13, weight: .semibold))
                                 .foregroundStyle(.primary)
-                            Text("Drop a .tinyrec, TinyTask .rec, or .txt macro.")
+                            Text(L10n.text("Drop a .tinyrec, TinyTask .rec, or .txt macro."))
                                 .font(.system(size: 10.5))
                                 .foregroundStyle(.secondary)
                         }
@@ -214,7 +214,7 @@ struct PopoverContentView: View {
                 searchFocused: $searchFocused,
                 isWindow: isWindow,
                 macroCount: library.macros.count,
-                title: filter == .all ? "Your macros" : filter.label,
+                title: filter == .all ? L10n.text("Your macros") : filter.label,
                 onQuickRun: { withAnimation(Brand.spring) { showQuickRun = true } }
             )
             .padding(.horizontal, isWindow ? 24 : 16)
@@ -294,12 +294,12 @@ struct PopoverContentView: View {
                 let allChainCandidates = library.macros.map { ($0.id, $0.name) }
                 ScrollView {
                     HStack {
-                        Text(search.isEmpty ? "\(filteredMacros.count) saved macro\(filteredMacros.count == 1 ? "" : "s")" : "\(filteredMacros.count) result\(filteredMacros.count == 1 ? "" : "s")")
+                        Text(search.isEmpty ? L10n.count("saved_macros", filteredMacros.count) : L10n.count("search_results", filteredMacros.count))
                             .font(.system(size: 11, weight: .medium))
                             .foregroundStyle(.secondary)
                         Spacer()
                         if isWindow {
-                            Text("Select a macro to make it current")
+                            Text(L10n.text("Select a macro to make it current"))
                                 .font(.system(size: 10.5))
                                 .foregroundStyle(.tertiary)
                         }
@@ -423,11 +423,11 @@ struct PopoverContentView: View {
             if isWindow {
                 HStack(spacing: 6) {
                     Image(systemName: "keyboard")
-                    Text("\(state.recordHotkey.name) Record")
+                    Text(L10n.text("%@ Record", String(describing: state.recordHotkey.name)))
                     Text("·")
-                    Text("\(state.playHotkey.name) Play")
+                    Text(L10n.text("%@ Play", String(describing: state.playHotkey.name)))
                     Spacer()
-                    Text("\(state.stopHotkey.name) Stop")
+                    Text(L10n.text("%@ Stop", String(describing: state.stopHotkey.name)))
                 }
                 .font(.system(size: 10.5))
                 .foregroundStyle(.secondary)
@@ -542,7 +542,7 @@ private struct FilterChipRow: View {
             )
         }
         .buttonStyle(HoverPressButtonStyle())
-        .accessibilityLabel("Filter: \(item.label)")
+        .accessibilityLabel(L10n.text("Filter: %@", String(describing: item.label)))
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }
@@ -563,7 +563,7 @@ private struct LibrarySidebar: View {
                 BrandMark(size: 30)
                 VStack(alignment: .leading, spacing: 3) {
                     Wordmark(size: 14)
-                    Text("A little time, returned.")
+                    Text(L10n.text("A little time, returned."))
                         .font(.system(size: 10))
                         .foregroundStyle(.secondary)
                 }
@@ -574,13 +574,13 @@ private struct LibrarySidebar: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 5) {
-                    sectionHeader("WORKSPACE")
+                    sectionHeader(L10n.text("WORKSPACE"))
                     ForEach(filterItems, id: \.self) { item in
                         sidebarRow(item)
                     }
 
                     if !library.allTags.isEmpty {
-                        sectionHeader("TAGS")
+                        sectionHeader(L10n.text("TAGS"))
                             .padding(.top, 10)
                         ForEach(library.allTags, id: \.self) { t in
                             sidebarRow(.tag(t))
@@ -595,7 +595,7 @@ private struct LibrarySidebar: View {
             Button { controller.presentQuickRun() } label: {
                 HStack(spacing: 6) {
                     Image(systemName: "keyboard")
-                    Text("Quick Run")
+                    Text(L10n.text("Quick Run"))
                     Spacer()
                     Text("⌘K").font(.system(size: 10, design: .monospaced))
                 }
@@ -606,7 +606,7 @@ private struct LibrarySidebar: View {
             .foregroundStyle(.secondary)
             .padding(.horizontal, 20)
             .padding(.bottom, 14)
-            .help("Quick Run (⌘K)")
+            .help(L10n.text("Quick Run (⌘K)"))
 
             Divider().opacity(0.45)
             LibraryFooter(controller: controller, state: state)
@@ -674,10 +674,10 @@ private struct LibraryHeader: View {
     @EnvironmentObject var state: AppState
 
     private var statusText: String {
-        if state.recordingCountdownActive { return "Get ready to capture your next routine." }
-        if recorder.isRecording { return "Recording your mouse and keyboard." }
-        if player.isPlaying { return "Your macro is running." }
-        return macroCount == 0 ? "Turn a routine into a single action." : "Less repetition. More time for everything else."
+        if state.recordingCountdownActive { return L10n.text("Get ready to capture your next routine.") }
+        if recorder.isRecording { return L10n.text("Recording your mouse and keyboard.") }
+        if player.isPlaying { return L10n.text("Your macro is running.") }
+        return macroCount == 0 ? L10n.text("Turn a routine into a single action.") : L10n.text("Less repetition. More time for everything else.")
     }
 
     var body: some View {
@@ -685,7 +685,7 @@ private struct LibraryHeader: View {
             HStack(alignment: .center, spacing: 16) {
                 VStack(alignment: .leading, spacing: 6) {
                     if isWindow {
-                        Text("LIBRARY")
+                        Text(L10n.text("LIBRARY"))
                             .font(.system(size: 9, weight: .semibold))
                             .tracking(1.4)
                             .foregroundStyle(.secondary)
@@ -715,7 +715,7 @@ private struct LibraryHeader: View {
                 Button(action: onQuickRun) {
                     HStack(spacing: 6) {
                         Image(systemName: "bolt")
-                        if isWindow { Text("Quick Run") }
+                        if isWindow { Text(L10n.text("Quick Run")) }
                         Text("⌘K").foregroundStyle(.tertiary)
                     }
                     .font(.system(size: 11, weight: .medium))
@@ -728,8 +728,8 @@ private struct LibraryHeader: View {
                 .buttonStyle(HoverPressButtonStyle())
                 .fixedSize()
                 .disabled(recorder.isRecording || state.recordingCountdownActive)
-                .help("Quick Run (⌘K)")
-                .accessibilityLabel("Quick Run (⌘K)")
+                .help(L10n.text("Quick Run (⌘K)"))
+                .accessibilityLabel(L10n.text("Quick Run (⌘K)"))
 
                 Button { controller.open() } label: {
                     Image(systemName: "square.and.arrow.down")
@@ -740,8 +740,8 @@ private struct LibraryHeader: View {
                         .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Brand.hairline))
                 }
                 .buttonStyle(HoverPressButtonStyle())
-                .help("Import macro (⌘O)")
-                .accessibilityLabel("Import macro (⌘O)")
+                .help(L10n.text("Import macro (⌘O)"))
+                .accessibilityLabel(L10n.text("Import macro (⌘O)"))
 
                 if player.isPlaying {
                     Button { controller.stopAll() } label: {
@@ -750,8 +750,8 @@ private struct LibraryHeader: View {
                             .frame(width: 34, height: 34)
                     }
                     .buttonStyle(.plain)
-                    .help("Stop playback")
-                    .accessibilityLabel("Stop playback")
+                    .help(L10n.text("Stop playback"))
+                    .accessibilityLabel(L10n.text("Stop playback"))
                 }
             }
         }
@@ -762,7 +762,7 @@ private struct LibraryHeader: View {
             HStack(spacing: 8) {
                 Image(systemName: state.recordingCountdownActive ? "xmark" : (recorder.isRecording ? "stop.fill" : "record.circle"))
                     .font(.system(size: 14, weight: .semibold))
-                Text(state.recordingCountdownActive ? "Cancel" : (recorder.isRecording ? "Stop & save" : (isWindow ? "New recording" : "Record")))
+                Text(state.recordingCountdownActive ? L10n.text("Cancel") : (recorder.isRecording ? L10n.text("Stop & save") : (isWindow ? L10n.text("New recording") : L10n.text("Record"))))
                     .font(.system(size: 12, weight: .semibold))
                 if isWindow {
                     Text(state.recordHotkey.name)
@@ -785,8 +785,8 @@ private struct LibraryHeader: View {
     }
 
     private var recordControlLabel: String {
-        if state.recordingCountdownActive { return "Cancel recording countdown" }
-        return recorder.isRecording ? "Stop recording" : "Start recording"
+        if state.recordingCountdownActive { return L10n.text("Cancel recording countdown") }
+        return recorder.isRecording ? L10n.text("Stop recording") : L10n.text("Start recording")
     }
 
     private var searchField: some View {
@@ -794,11 +794,11 @@ private struct LibraryHeader: View {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(.secondary)
-            TextField("Search your macros", text: $search)
+            TextField(L10n.text("Search your macros"), text: $search)
                 .textFieldStyle(.plain)
                 .font(.system(size: 12))
                 .focused(searchFocused)
-                .accessibilityLabel("Search macros")
+                .accessibilityLabel(L10n.text("Search macros"))
             if search.isEmpty {
                 Text("⌘F")
                     .font(.system(size: 10, weight: .medium, design: .monospaced))
@@ -809,7 +809,7 @@ private struct LibraryHeader: View {
                         .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Clear search")
+                .accessibilityLabel(L10n.text("Clear search"))
             }
         }
         .padding(.horizontal, 11)
@@ -837,26 +837,26 @@ private struct SelectionToolbar: View {
                     .foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Clear selection")
+            .accessibilityLabel(L10n.text("Clear selection"))
             .interactiveLift3D(intensity: 0.46, cornerRadius: 6)
-            Text("\(selectionCount) selected")
+            Text(L10n.text("%@ selected", String(describing: selectionCount)))
                 .font(.system(size: 11.5, weight: .semibold))
                 .foregroundStyle(.primary)
 
             Spacer()
 
-            Button("Add Tag…", systemImage: "tag", action: onAddTag)
+            Button(L10n.text("Add Tag…"), systemImage: "tag", action: onAddTag)
                 .buttonStyle(.bordered)
                 .controlSize(.small)
                 .disabled(selectionCount != 1)
                 .interactiveLift3D(intensity: 0.54, cornerRadius: 7)
 
-            Button("Export", systemImage: "square.and.arrow.up", action: onExport)
+            Button(L10n.text("Export"), systemImage: "square.and.arrow.up", action: onExport)
                 .buttonStyle(.bordered)
                 .controlSize(.small)
                 .interactiveLift3D(intensity: 0.54, cornerRadius: 7)
 
-            Button("Delete", systemImage: "trash", role: .destructive) {
+            Button(L10n.text("Delete"), systemImage: "trash", role: .destructive) {
                 confirmDelete = true
             }
             .buttonStyle(.bordered)
@@ -864,14 +864,14 @@ private struct SelectionToolbar: View {
             .tint(.red)
             .interactiveLift3D(intensity: 0.54, cornerRadius: 7)
             .confirmationDialog(
-                "Delete \(selectionCount) macro\(selectionCount == 1 ? "" : "s")?",
+                L10n.count("delete_macros", selectionCount),
                 isPresented: $confirmDelete,
                 titleVisibility: .visible
             ) {
-                Button("Delete", role: .destructive) { onDelete() }
-                Button("Cancel", role: .cancel) {}
+                Button(L10n.text("Delete"), role: .destructive) { onDelete() }
+                Button(L10n.text("Cancel"), role: .cancel) {}
             } message: {
-                Text("This can't be undone.")
+                Text(L10n.text("This can't be undone."))
             }
         }
         .padding(.horizontal, 10)
@@ -967,33 +967,33 @@ private struct MacroCard: View {
             .accessibilityLabel(accessibilitySummary)
             .accessibilityAddTraits(isCurrent ? [.isButton, .isSelected] : .isButton)
             .accessibilityAction { onSelect([]) }
-            .accessibilityAction(named: "Play") { onPlay() }
-            .accessibilityAction(named: "Edit") { onEdit() }
-            .accessibilityAction(named: macro.favorite ? "Remove favorite" : "Add favorite") { onToggleFavorite() }
-            .accessibilityAction(named: "Rename") { onStartRename() }
-            .accessibilityAction(named: "Delete") { confirmDelete = true }
+            .accessibilityAction(named: L10n.text("Play")) { onPlay() }
+            .accessibilityAction(named: L10n.text("Edit")) { onEdit() }
+            .accessibilityAction(named: macro.favorite ? L10n.text("Remove favorite") : L10n.text("Add favorite")) { onToggleFavorite() }
+            .accessibilityAction(named: L10n.text("Rename")) { onStartRename() }
+            .accessibilityAction(named: L10n.text("Delete")) { confirmDelete = true }
             .contextMenu { cardMenuItems }
-            .alert("Custom playback speed", isPresented: $showCustomSpeed) {
-                TextField("e.g. 1.75", text: $customSpeedText)
-                Button("Cancel", role: .cancel) {}
-                Button("Set") {
+            .alert(L10n.text("Custom playback speed"), isPresented: $showCustomSpeed) {
+                TextField(L10n.text("e.g. 1.75"), text: $customSpeedText)
+                Button(L10n.text("Cancel"), role: .cancel) {}
+                Button(L10n.text("Set")) {
                     let trimmed = customSpeedText.trimmingCharacters(in: .whitespaces)
                     if let v = Double(trimmed) {
                         onSetSpeed(max(0.1, min(10.0, v)))
                     }
                 }
             } message: {
-                Text("Multiplier between 0.1× and 10×.")
+                Text(L10n.text("Multiplier between 0.1× and 10×."))
             }
             .confirmationDialog(
-                "Delete \(macro.name)?",
+                L10n.text("Delete %@?", String(describing: macro.name)),
                 isPresented: $confirmDelete,
                 titleVisibility: .visible
             ) {
-                Button("Delete", role: .destructive, action: onDelete)
-                Button("Cancel", role: .cancel) {}
+                Button(L10n.text("Delete"), role: .destructive, action: onDelete)
+                Button(L10n.text("Cancel"), role: .cancel) {}
             } message: {
-                Text("This macro will be permanently removed.")
+                Text(L10n.text("This macro will be permanently removed."))
             }
             .onDrag {
                 NSItemProvider(object: macro.id.uuidString as NSString)
@@ -1069,30 +1069,30 @@ private struct MacroCard: View {
 
     @ViewBuilder
     private var cardMenuItems: some View {
-        Button("Play") { onPlay() }
-        Button("Edit…") { onEdit() }
+        Button(L10n.text("Play")) { onPlay() }
+        Button(L10n.text("Edit…")) { onEdit() }
         Divider()
-        Button("Rename…") { onStartRename() }
-        Button(macro.favorite ? "Unfavorite" : "Favorite") { onToggleFavorite() }
+        Button(L10n.text("Rename…")) { onStartRename() }
+        Button(macro.favorite ? L10n.text("Unfavorite") : L10n.text("Favorite")) { onToggleFavorite() }
         Divider()
-        Button("Notes…") { onOpenNotes() }
-        Button("Add Tag…") { onAddTag() }
-        Button("Assign Hotkey…") { onAssignHotkey() }
+        Button(L10n.text("Notes…")) { onOpenNotes() }
+        Button(L10n.text("Add Tag…")) { onAddTag() }
+        Button(L10n.text("Assign Hotkey…")) { onAssignHotkey() }
         if macro.hotkey != nil {
-            Button("Clear Hotkey") { onClearHotkey() }
+            Button(L10n.text("Clear Hotkey")) { onClearHotkey() }
         }
         Divider()
         speedSubmenu()
         colorSubmenu()
         chainSubmenu()
         Divider()
-        Button("Duplicate") { onDuplicate() }
-        Menu("Export") {
-            Button("As TinyRecorder File…") { onExport() }
-            Button("As Text…") { onExportText() }
+        Button(L10n.text("Duplicate")) { onDuplicate() }
+        Menu(L10n.text("Export")) {
+            Button(L10n.text("As TinyRecorder File…")) { onExport() }
+            Button(L10n.text("As Text…")) { onExportText() }
         }
         Divider()
-        Button("Delete", role: .destructive) { confirmDelete = true }
+        Button(L10n.text("Delete"), role: .destructive) { confirmDelete = true }
     }
 
     private var cardContent: some View {
@@ -1101,7 +1101,7 @@ private struct MacroCard: View {
                 MacroIconView(macro: macro, onSetIcon: onSetIcon)
                 VStack(alignment: .leading, spacing: 4) {
                     if isRenaming {
-                        TextField("Name", text: $renameText, onCommit: onCommitRename)
+                        TextField(L10n.text("Name"), text: $renameText, onCommit: onCommitRename)
                             .textFieldStyle(.plain)
                             .font(.system(size: 13, weight: .semibold))
                             .padding(4)
@@ -1114,7 +1114,7 @@ private struct MacroCard: View {
                             .foregroundStyle(.primary)
                             .lineLimit(1)
                     }
-                    Text(isPlaying ? "Playing now" : (isCurrent ? "Current macro" : "Edited \(RelativeTime.string(from: macro.modifiedAt))"))
+                    Text(isPlaying ? L10n.text("Playing now") : (isCurrent ? L10n.text("Current macro") : L10n.text("Edited %@", String(describing: RelativeTime.string(from: macro.modifiedAt)))))
                         .font(.system(size: 10.5))
                         .foregroundStyle(isPlaying ? AnyShapeStyle(Brand.red500) : AnyShapeStyle(.secondary))
                 }
@@ -1127,8 +1127,8 @@ private struct MacroCard: View {
                         .frame(width: 24, height: 24)
                 }
                 .buttonStyle(.plain)
-                .help(macro.favorite ? "Remove favorite" : "Add favorite")
-                .accessibilityLabel(macro.favorite ? "Remove favorite" : "Add favorite")
+                .help(macro.favorite ? L10n.text("Remove favorite") : L10n.text("Add favorite"))
+                .accessibilityLabel(macro.favorite ? L10n.text("Remove favorite") : L10n.text("Add favorite"))
             }
 
             MiniWaveform(
@@ -1145,14 +1145,14 @@ private struct MacroCard: View {
             HStack(spacing: 6) {
                 metaRow
                 Spacer(minLength: 4)
-                Text("\(macro.eventCount) events")
+                Text(L10n.text("%@ events", String(describing: macro.eventCount)))
                     .font(.system(size: 10.5))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                 if let hk = macro.hotkey {
                     Button(action: onAssignHotkey) { KeyCapView(text: hk.name, size: .sm) }
                         .buttonStyle(.plain)
-                        .help("Change hotkey")
+                        .help(L10n.text("Change hotkey"))
                 }
             }
 
@@ -1176,7 +1176,7 @@ private struct MacroCard: View {
 
             HStack(spacing: 8) {
                 Button(action: onPlay) {
-                    Label(isPlaying ? "Stop" : "Play", systemImage: isPlaying ? "stop.fill" : "play.fill")
+                    Label(isPlaying ? L10n.text("Stop") : L10n.text("Play"), systemImage: isPlaying ? "stop.fill" : "play.fill")
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(isPlaying ? AnyShapeStyle(Brand.red500) : AnyShapeStyle(.primary))
                         .padding(.horizontal, 11)
@@ -1184,12 +1184,12 @@ private struct MacroCard: View {
                         .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 6))
                 }
                 .buttonStyle(HoverPressButtonStyle(pressScale: 0.98))
-                .help(isPlaying ? "Stop playback" : "Play this macro")
+                .help(isPlaying ? L10n.text("Stop playback") : L10n.text("Play this macro"))
 
                 LoopChip(loops: macro.loops, onChange: onSetLoops)
                 Spacer(minLength: 0)
-                CardActionButton(systemImage: "slider.horizontal.3", tint: .primary, label: "Edit \(macro.name)") { onEdit() }
-                    .help("Edit macro")
+                CardActionButton(systemImage: "slider.horizontal.3", tint: .primary, label: L10n.text("Edit %@", String(describing: macro.name))) { onEdit() }
+                    .help(L10n.text("Edit macro"))
                 Menu { cardMenuItems } label: {
                     Image(systemName: "ellipsis")
                         .font(.system(size: 12, weight: .semibold))
@@ -1200,7 +1200,7 @@ private struct MacroCard: View {
                 .menuStyle(.borderlessButton)
                 .menuIndicator(.hidden)
                 .frame(width: 28, height: 28)
-                .accessibilityLabel("More actions")
+                .accessibilityLabel(L10n.text("More actions"))
             }
         }
     }
@@ -1208,8 +1208,8 @@ private struct MacroCard: View {
     /// What VoiceOver reads for the whole card.
     private var accessibilitySummary: String {
         var parts = [macro.name, durationText]
-        if macro.playCount > 0 { parts.append("played \(macro.playCount) times") }
-        if macro.hotkey != nil { parts.append("hotkey \(macro.hotkey!.name)") }
+        if macro.playCount > 0 { parts.append(L10n.text("played %@ times", String(describing: macro.playCount))) }
+        if macro.hotkey != nil { parts.append(L10n.text("hotkey %@", String(describing: macro.hotkey!.name))) }
         if macro.favorite { parts.append("favorite") }
         return parts.joined(separator: ", ")
     }
@@ -1224,7 +1224,7 @@ private struct MacroCard: View {
                     .font(.system(size: 8.5, weight: .bold))
                     .foregroundStyle(cardAccentColor(for: macro.accent))
                     .symbolEffect(.variableColor.iterative, options: .repeating)
-                Text(totalLoops > 0 ? "\(max(1, currentLoop))/\(totalLoops)" : "loop \(max(1, currentLoop))")
+                Text(totalLoops > 0 ? "\(max(1, currentLoop))/\(totalLoops)" : L10n.text("loop %@", String(describing: max(1, currentLoop))))
                     .font(.system(size: 9.5, weight: .semibold, design: .monospaced))
                     .foregroundStyle(cardAccentColor(for: macro.accent))
                     .contentTransition(.numericText())
@@ -1242,7 +1242,7 @@ private struct MacroCard: View {
                 Image(systemName: "arrow.right")
                     .font(.system(size: 8, weight: .black))
                     .foregroundStyle(.tertiary)
-                    .help(chainTargetName.map { "Chains to \($0)" } ?? "Chained")
+                    .help(chainTargetName.map { L10n.text("Chains to %@", String(describing: $0)) } ?? L10n.text("Chained"))
             }
         }
         .lineLimit(1)
@@ -1253,7 +1253,7 @@ private struct MacroCard: View {
 
     @ViewBuilder
     private func speedSubmenu() -> some View {
-        Menu("Speed") {
+        Menu(L10n.text("Speed")) {
             ForEach([0.25, 0.5, 1.0, 2.0, 4.0, 8.0], id: \.self) { v in
                 Button {
                     onSetSpeed(v)
@@ -1266,7 +1266,7 @@ private struct MacroCard: View {
                 }
             }
             Divider()
-            Button("Custom…") {
+            Button(L10n.text("Custom…")) {
                 customSpeedText = String(format: "%g", macro.speed)
                 showCustomSpeed = true
             }
@@ -1275,14 +1275,14 @@ private struct MacroCard: View {
 
     @ViewBuilder
     private func colorSubmenu() -> some View {
-        Menu("Color") {
+        Menu(L10n.text("Color")) {
             Button {
                 onSetAccent(nil)
             } label: {
                 if macro.accent == nil {
-                    Label("Default", systemImage: "checkmark")
+                    Label(L10n.text("Default"), systemImage: "checkmark")
                 } else {
-                    Text("Default")
+                    Text(L10n.text("Default"))
                 }
             }
             Divider()
@@ -1291,9 +1291,9 @@ private struct MacroCard: View {
                     onSetAccent(name)
                 } label: {
                     if (macro.accent ?? "").caseInsensitiveCompare(name) == .orderedSame {
-                        Label(name, systemImage: "checkmark")
+                        Label(L10n.text(name), systemImage: "checkmark")
                     } else {
-                        Text(name)
+                        Text(L10n.text(name))
                     }
                 }
             }
@@ -1303,14 +1303,14 @@ private struct MacroCard: View {
     @ViewBuilder
     private func chainSubmenu() -> some View {
         let candidates = chainCandidates.filter { $0.0 != macro.id }
-        Menu("Chain to") {
+        Menu(L10n.text("Chain to")) {
             Button {
                 onSetChain(nil)
             } label: {
                 if macro.chainTo == nil {
-                    Label("None", systemImage: "checkmark")
+                    Label(L10n.text("None"), systemImage: "checkmark")
                 } else {
-                    Text("None")
+                    Text(L10n.text("None"))
                 }
             }
             if !candidates.isEmpty { Divider() }
@@ -1319,7 +1319,7 @@ private struct MacroCard: View {
                     onSetChain(id)
                 } label: {
                     if macro.chainTo == id {
-                        Label(name, systemImage: "checkmark")
+                        Label(L10n.text(name), systemImage: "checkmark")
                     } else {
                         Text(name)
                     }
@@ -1355,7 +1355,7 @@ private struct MacroIconView: View {
     var body: some View {
         let tint = cardAccentColor(for: macro.accent)
         Menu {
-            Section("SF Symbol") {
+            Section(L10n.text("SF Symbol")) {
                 ForEach(Self.symbolPalette, id: \.self) { s in
                     Button {
                         onSetIcon(s)
@@ -1365,7 +1365,7 @@ private struct MacroIconView: View {
                 }
             }
             Divider()
-            Button("Reset", role: .destructive) { onSetIcon(nil) }
+            Button(L10n.text("Reset"), role: .destructive) { onSetIcon(nil) }
         } label: {
             ZStack {
                 RoundedRectangle(cornerRadius: 9, style: .continuous)
@@ -1379,8 +1379,8 @@ private struct MacroIconView: View {
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
         .frame(width: 36, height: 36)
-        .help("Change icon")
-        .accessibilityLabel("Change icon")
+        .help(L10n.text("Change icon"))
+        .accessibilityLabel(L10n.text("Change icon"))
     }
 }
 
@@ -1525,33 +1525,33 @@ private struct EmptyState: View {
     }
 
     private var title: String {
-        if hasSearch { return "No matches" }
+        if hasSearch { return L10n.text("No matches") }
         switch filter {
-        case .favorites:  return "No favorites yet"
-        case .recent:     return "Nothing recent"
-        case .mostPlayed: return "No playback history"
-        case .withHotkey: return "No macros with hotkeys"
-        case .tag(let t): return "No macros tagged \(t)"
-        case .all:        return "Your next routine, on repeat."
+        case .favorites:  return L10n.text("No favorites yet")
+        case .recent:     return L10n.text("Nothing recent")
+        case .mostPlayed: return L10n.text("No playback history")
+        case .withHotkey: return L10n.text("No macros with hotkeys")
+        case .tag(let t): return L10n.text("No macros tagged %@", String(describing: t))
+        case .all:        return L10n.text("Your next routine, on repeat.")
         }
     }
 
     private var subtitle: String {
-        if hasSearch { return "Try a different search term." }
+        if hasSearch { return L10n.text("Try a different search term.") }
         switch filter {
-        case .favorites: return "Tap the ★ on any card to favorite it."
+        case .favorites: return L10n.text("Tap the ★ on any card to favorite it.")
         case .all:
             if countdownSeconds > 0 {
-                return "Capture your first macro. Recording begins after a \(countdownSeconds)-second countdown."
+                return L10n.text("Capture your first macro. Recording begins after a %@-second countdown.", String(describing: countdownSeconds))
             }
-            return "Capture your first macro. Recording starts immediately."
-        default:         return "Try the All filter."
+            return L10n.text("Capture your first macro. Recording starts immediately.")
+        default:         return L10n.text("Try the All filter.")
         }
     }
 
     private var primaryActionTitle: String {
-        if hasSearch { return "Clear Search" }
-        return filter == .all ? "Record First Macro" : "Show All Macros"
+        if hasSearch { return L10n.text("Clear Search") }
+        return filter == .all ? L10n.text("Record First Macro") : L10n.text("Show All Macros")
     }
 }
 
@@ -1565,10 +1565,10 @@ private struct LibraryFooter: View {
     var body: some View {
         if compact {
             HStack(spacing: 16) {
-                Button("Library", systemImage: "sidebar.left") { controller.showMainWindow() }
-                Button("Editor", systemImage: "slider.horizontal.3") { controller.openEditor() }
+                Button(L10n.text("Library"), systemImage: "sidebar.left") { controller.showMainWindow() }
+                Button(L10n.text("Editor"), systemImage: "slider.horizontal.3") { controller.openEditor() }
                 Spacer()
-                Button("Settings", systemImage: "gearshape") { controller.showSettingsWindow() }
+                Button(L10n.text("Settings"), systemImage: "gearshape") { controller.showSettingsWindow() }
             }
             .font(.system(size: 11, weight: .medium))
             .foregroundStyle(.secondary)
@@ -1577,19 +1577,19 @@ private struct LibraryFooter: View {
         VStack(spacing: 0) {
             FooterRow(
                 icon: "plus",
-                label: "New macro",
+                label: L10n.text("New macro"),
                 rightAccessory: AnyView(KeyCapView(text: "⌘R", size: .sm)),
                 action: { controller.toggleRecording() }
             )
             FooterRow(
                 icon: "slider.horizontal.below.rectangle",
-                label: "Open editor",
+                label: L10n.text("Open editor"),
                 rightAccessory: nil,
                 action: { controller.openEditor() }
             )
             FooterRow(
                 icon: "gearshape",
-                label: "Settings",
+                label: L10n.text("Settings"),
                 rightAccessory: AnyView(KeyCapView(text: "⌘,", size: .sm)),
                 action: { controller.showSettingsWindow() }
             )
@@ -1648,10 +1648,10 @@ private struct PermissionBanner: View {
                 .font(.system(size: 14))
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("Permissions required")
+                Text(L10n.text("Permissions required"))
                     .font(.system(size: 11.5, weight: .semibold))
                     .foregroundStyle(.primary)
-                Text("Grant Accessibility & Input Monitoring to record and replay.")
+                Text(L10n.text("Grant Accessibility & Input Monitoring to record and replay."))
                     .font(.system(size: 10))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -1659,7 +1659,7 @@ private struct PermissionBanner: View {
 
             Spacer()
 
-            Button("Open") {
+            Button(L10n.text("Open")) {
                 if !accessibilityGranted {
                     controller.openAccessibilityPrefs()
                 } else if !inputMonitoringGranted {
@@ -1693,8 +1693,8 @@ struct LoopChip: View {
 
     var body: some View {
         Menu {
-            Section("Repeat") {
-                Button("1× (no loop)") { onChange(1) }
+            Section(L10n.text("Repeat")) {
+                Button(L10n.text("1× (no loop)")) { onChange(1) }
                 Button("2×")           { onChange(2) }
                 Button("5×")           { onChange(5) }
                 Button("10×")          { onChange(10) }
@@ -1702,9 +1702,9 @@ struct LoopChip: View {
                 Button("100×")         { onChange(100) }
             }
             Divider()
-            Button { onChange(0) } label: { Label("Continuous", systemImage: "infinity") }
+            Button { onChange(0) } label: { Label(L10n.text("Continuous"), systemImage: "infinity") }
             Divider()
-            Button("Custom…") {
+            Button(L10n.text("Custom…")) {
                 customText = loops > 0 ? "\(loops)" : ""
                 showCustom = true
             }
@@ -1727,19 +1727,19 @@ struct LoopChip: View {
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
         .fixedSize()
-        .help(loops <= 0 ? "Repeats continuously" : (loops == 1 ? "Plays once" : "Repeats \(loops) times"))
-        .accessibilityLabel(loops <= 0 ? "Repeat: continuous" : "Repeat: \(loops) times")
+        .help(loops <= 0 ? L10n.text("Repeats continuously") : (loops == 1 ? L10n.text("Plays once") : L10n.text("Repeats %@ times", String(describing: loops))))
+        .accessibilityLabel(loops <= 0 ? L10n.text("Repeat: continuous") : L10n.text("Repeat: %@ times", String(describing: loops)))
         .onHover { hovered = $0 }
-        .alert("Custom repeat count", isPresented: $showCustom) {
-            TextField("e.g. 42", text: $customText)
-            Button("Cancel", role: .cancel) {}
-            Button("Set") {
+        .alert(L10n.text("Custom repeat count"), isPresented: $showCustom) {
+            TextField(L10n.text("e.g. 42"), text: $customText)
+            Button(L10n.text("Cancel"), role: .cancel) {}
+            Button(L10n.text("Set")) {
                 let trimmed = customText.trimmingCharacters(in: .whitespaces)
                 if trimmed.isEmpty || trimmed == "∞" { onChange(0) }
                 else if let n = Int(trimmed) { onChange(normalizedLoopCount(n)) }
             }
         } message: {
-            Text("Enter a number, or 0 (or leave blank) for continuous.")
+            Text(L10n.text("Enter a number, or 0 (or leave blank) for continuous."))
         }
     }
 }
@@ -1764,8 +1764,8 @@ private struct HotkeyAssignmentSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Assign Hotkey").font(.system(size: 14, weight: .semibold))
-                Text("Press F-key to play **\(macro.name)** from any app.")
+                Text(L10n.text("Assign Hotkey")).font(.system(size: 14, weight: .semibold))
+                Text(LocalizedStringKey(L10n.text("Press F-key to play **%@** from any app.", String(describing: macro.name))))
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
             }
@@ -1793,22 +1793,22 @@ private struct HotkeyAssignmentSheet: View {
                     }
                     .buttonStyle(.plain)
                     .disabled(inUse)
-                    .help(inUse ? "Already in use" : "")
+                    .help(inUse ? L10n.text("Already in use") : "")
                     .interactiveLift3D(intensity: 0.56, cornerRadius: 7)
                 }
             }
 
             HStack {
                 if currentHotkey != nil {
-                Button("Clear") { onSave(nil) }
+                Button(L10n.text("Clear")) { onSave(nil) }
                     .controlSize(.regular)
                     .interactiveLift3D(intensity: 0.50, cornerRadius: 7)
                 }
                 Spacer()
-                Button("Cancel", action: onCancel)
+                Button(L10n.text("Cancel"), action: onCancel)
                     .keyboardShortcut(.cancelAction)
                     .interactiveLift3D(intensity: 0.50, cornerRadius: 7)
-                Button("Assign") {
+                Button(L10n.text("Assign")) {
                     if let s = selected, let pair = fkeys.first(where: { $0.0 == s }) {
                         onSave(HotkeyBinding(keyCode: pair.0, name: pair.1))
                     }
@@ -1836,8 +1836,8 @@ private struct NotesSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Notes").font(.system(size: 14, weight: .semibold))
-                Text("A free-form scratchpad attached to **\(macro.name)**.")
+                Text(L10n.text("Notes")).font(.system(size: 14, weight: .semibold))
+                Text(LocalizedStringKey(L10n.text("A free-form scratchpad attached to **%@**.", String(describing: macro.name))))
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
             }
@@ -1846,7 +1846,7 @@ private struct NotesSheet: View {
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .stroke(Color.primary.opacity(0.15), lineWidth: 0.5)
                 if text.isEmpty {
-                    Text("What does this macro do? When did you build it? Any caveats…")
+                    Text(L10n.text("What does this macro do? When did you build it? Any caveats…"))
                         .font(.system(size: 11))
                         .foregroundStyle(.tertiary)
                         .padding(.horizontal, 8)
@@ -1863,10 +1863,10 @@ private struct NotesSheet: View {
 
             HStack {
                 Spacer()
-                Button("Cancel", action: onCancel)
+                Button(L10n.text("Cancel"), action: onCancel)
                     .keyboardShortcut(.cancelAction)
                     .interactiveLift3D(intensity: 0.50, cornerRadius: 7)
-                Button("Save", action: onSave)
+                Button(L10n.text("Save"), action: onSave)
                     .keyboardShortcut(.defaultAction)
                     .buttonStyle(.borderedProminent)
                     .interactiveLift3D(intensity: 0.68, cornerRadius: 8)
@@ -1890,36 +1890,36 @@ private struct TagAssignmentSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Tags").font(.system(size: 14, weight: .semibold))
-                Text("Tag **\(macro.name)** to organize your library.")
+                Text(L10n.text("Tags")).font(.system(size: 14, weight: .semibold))
+                Text(LocalizedStringKey(L10n.text("Tag **%@** to organize your library.", String(describing: macro.name))))
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
             }
 
             HStack {
-                TextField("New tag", text: $tagText, onCommit: {
+                TextField(L10n.text("New tag"), text: $tagText, onCommit: {
                     onAdd(tagText)
                 })
                 .textFieldStyle(.roundedBorder)
-                Button("Add") { onAdd(tagText) }
+                Button(L10n.text("Add")) { onAdd(tagText) }
                     .keyboardShortcut(.defaultAction)
                     .disabled(tagText.trimmingCharacters(in: .whitespaces).isEmpty)
                     .interactiveLift3D(intensity: 0.56, cornerRadius: 7)
             }
 
             if !macro.tags.isEmpty {
-                Text("Current").font(.system(size: 10, weight: .semibold)).foregroundStyle(.secondary)
+                Text(L10n.text("Current")).font(.system(size: 10, weight: .semibold)).foregroundStyle(.secondary)
                 FlowChips(items: macro.tags, onRemove: onRemove)
             }
             if !allTags.isEmpty {
-                Text("Suggestions").font(.system(size: 10, weight: .semibold)).foregroundStyle(.secondary)
+                Text(L10n.text("Suggestions")).font(.system(size: 10, weight: .semibold)).foregroundStyle(.secondary)
                     .padding(.top, 2)
                 FlowChips(items: allTags.filter { !macro.tags.contains($0) }, onRemove: nil, onAdd: onAdd)
             }
 
             HStack {
                 Spacer()
-                Button("Done", action: onDone)
+                Button(L10n.text("Done"), action: onDone)
                     .keyboardShortcut(.defaultAction)
                     .buttonStyle(.borderedProminent)
                     .interactiveLift3D(intensity: 0.68, cornerRadius: 8)
@@ -2030,16 +2030,16 @@ struct SettingsPanel: View {
             .padding(inWindow ? 18 : 14)
         }
         .frame(width: inWindow ? 580 : 340)
-        .alert("Custom loop count", isPresented: $showCustomLoop) {
-            TextField("e.g. 42", text: $customLoopText)
-            Button("Cancel", role: .cancel) {}
-            Button("Set") {
+        .alert(L10n.text("Custom loop count"), isPresented: $showCustomLoop) {
+            TextField(L10n.text("e.g. 42"), text: $customLoopText)
+            Button(L10n.text("Cancel"), role: .cancel) {}
+            Button(L10n.text("Set")) {
                 let trimmed = customLoopText.trimmingCharacters(in: .whitespaces)
                 if trimmed.isEmpty || trimmed == "∞" { state.loops = 0 }
                 else if let n = Int(trimmed) { state.loops = normalizedLoopCount(n) }
             }
         } message: {
-            Text("Enter a number, or 0 (or leave blank) for continuous.")
+            Text(L10n.text("Enter a number, or 0 (or leave blank) for continuous."))
         }
     }
 
@@ -2049,7 +2049,7 @@ struct SettingsPanel: View {
             VStack(alignment: .leading, spacing: 1) {
                 Text("TinyRecorder")
                     .font(.system(size: inWindow ? 16 : 13, weight: .semibold))
-                Text("Recording and playback preferences")
+                Text(L10n.text("Recording and playback preferences"))
                     .font(.system(size: 10.5))
                     .foregroundStyle(.secondary)
             }
@@ -2061,20 +2061,20 @@ struct SettingsPanel: View {
     }
 
     private var hotkeysGroup: some View {
-        settingsGroup("Hotkeys", systemImage: "keyboard") {
-            hotkeyRow(title: "Record / Stop", binding: Binding(
+        settingsGroup(L10n.text("Hotkeys"), systemImage: "keyboard") {
+            hotkeyRow(title: L10n.text("Record / Stop"), binding: Binding(
                 get: { state.recordHotkey },
                 set: { state.recordHotkey = $0; controller.reapplyHotkeys() }
             ))
-            hotkeyRow(title: "Stop everything", binding: Binding(
+            hotkeyRow(title: L10n.text("Stop everything"), binding: Binding(
                 get: { state.stopHotkey },
                 set: { state.stopHotkey = $0; controller.reapplyHotkeys() }
             ))
-            hotkeyRow(title: "Play", binding: Binding(
+            hotkeyRow(title: L10n.text("Play"), binding: Binding(
                 get: { state.playHotkey },
                 set: { state.playHotkey = $0; controller.reapplyHotkeys() }
             ))
-            Text("Control shortcut keystrokes are excluded from recordings. Other input is still recorded while a hotkey is held.")
+            Text(L10n.text("Control shortcut keystrokes are excluded from recordings. Other input is still recorded while a hotkey is held."))
                 .font(.system(size: 10))
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -2082,21 +2082,21 @@ struct SettingsPanel: View {
     }
 
     private var generalGroup: some View {
-        settingsGroup("General", systemImage: "macwindow") {
+        settingsGroup(L10n.text("General"), systemImage: "macwindow") {
             HStack {
-                Text("Show as").font(.system(size: 11.5))
+                Text(L10n.text("Show as")).font(.system(size: 11.5))
                 Spacer()
                 Picker("", selection: Binding(
                     get: { state.menuBarOnly },
                     set: { controller.setMenuBarOnly($0) }
                 )) {
-                    Text("Dock app").tag(false)
-                    Text("Menu bar only").tag(true)
+                    Text(L10n.text("Dock app")).tag(false)
+                    Text(L10n.text("Menu bar only")).tag(true)
                 }
                 .labelsHidden()
                 .frame(width: 130)
             }
-            Text("Menu bar only hides the Dock icon. Open TinyRecorder from its menu-bar icon.")
+            Text(L10n.text("Menu bar only hides the Dock icon. Open TinyRecorder from its menu-bar icon."))
                 .font(.system(size: 10))
                 .foregroundStyle(.tertiary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -2104,24 +2104,24 @@ struct SettingsPanel: View {
     }
 
     private var recordingGroup: some View {
-        settingsGroup("Recording", systemImage: "record.circle") {
+        settingsGroup(L10n.text("Recording"), systemImage: "record.circle") {
             HStack {
-                Text("Countdown").font(.system(size: 11.5))
+                Text(L10n.text("Countdown")).font(.system(size: 11.5))
                 Spacer()
                 Picker("", selection: $state.countdownSeconds) {
-                    Text("Off").tag(0)
-                    Text("1s").tag(1)
-                    Text("3s").tag(3)
-                    Text("5s").tag(5)
+                    Text(L10n.text("Off")).tag(0)
+                    Text(L10n.text("1s")).tag(1)
+                    Text(L10n.text("3s")).tag(3)
+                    Text(L10n.text("5s")).tag(5)
                 }
                 .labelsHidden()
                 .frame(width: 100)
             }
-            Toggle("Show floating HUD", isOn: $state.showRecordingHUD)
+            Toggle(L10n.text("Show floating HUD"), isOn: $state.showRecordingHUD)
                 .font(.system(size: 11.5))
                 .toggleStyle(.switch)
                 .controlSize(.mini)
-            Toggle("Sound effects", isOn: $state.soundEnabled)
+            Toggle(L10n.text("Sound effects"), isOn: $state.soundEnabled)
                 .font(.system(size: 11.5))
                 .toggleStyle(.switch)
                 .controlSize(.mini)
@@ -2129,33 +2129,33 @@ struct SettingsPanel: View {
     }
 
     private var playbackGroup: some View {
-        settingsGroup("Default playback", systemImage: "play.circle") {
+        settingsGroup(L10n.text("Default playback"), systemImage: "play.circle") {
             HStack {
-                Text("Repeat").font(.system(size: 11.5))
+                Text(L10n.text("Repeat")).font(.system(size: 11.5))
                 Spacer()
                 Menu {
-                    Button("1× (no loop)") { state.loops = 1 }
+                    Button(L10n.text("1× (no loop)")) { state.loops = 1 }
                     Button("2×") { state.loops = 2 }
                     Button("5×") { state.loops = 5 }
                     Button("10×") { state.loops = 10 }
                     Button("25×") { state.loops = 25 }
                     Button("100×") { state.loops = 100 }
                     Divider()
-                    Button { state.loops = 0 } label: { Label("Continuous", systemImage: "infinity") }
+                    Button { state.loops = 0 } label: { Label(L10n.text("Continuous"), systemImage: "infinity") }
                     Divider()
-                    Button("Custom…") {
+                    Button(L10n.text("Custom…")) {
                         customLoopText = state.loops > 0 ? "\(state.loops)" : ""
                         showCustomLoop = true
                     }
                 } label: {
-                    Text(state.loops <= 0 ? "∞ Continuous" : "\(state.loops)×")
+                    Text(state.loops <= 0 ? L10n.text("∞ Continuous") : "\(state.loops)×")
                         .font(.system(size: 11.5, weight: .semibold, design: .monospaced))
                 }
                 .menuStyle(.borderlessButton)
                 .frame(width: 115)
             }
             HStack {
-                Text("Speed").font(.system(size: 11.5))
+                Text(L10n.text("Speed")).font(.system(size: 11.5))
                 Spacer()
                 Picker("", selection: $state.speed) {
                     Text("0.5×").tag(0.5)
@@ -2166,15 +2166,15 @@ struct SettingsPanel: View {
                 .labelsHidden()
                 .frame(width: 100)
             }
-            Toggle("Hide TinyRecorder while playing", isOn: $state.hideDuringPlayback)
+            Toggle(L10n.text("Hide TinyRecorder while playing"), isOn: $state.hideDuringPlayback)
                 .font(.system(size: 11.5))
                 .toggleStyle(.switch)
                 .controlSize(.mini)
-            Text("Prevents recorded coordinates from clicking TinyRecorder's own windows.")
+            Text(L10n.text("Prevents recorded coordinates from clicking TinyRecorder's own windows."))
                 .font(.system(size: 10))
                 .foregroundStyle(.tertiary)
                 .fixedSize(horizontal: false, vertical: true)
-            Label("Move the mouse, click, scroll, or press a key to stop playback.", systemImage: "hand.raised")
+            Label(L10n.text("Move the mouse, click, scroll, or press a key to stop playback."), systemImage: "hand.raised")
                 .font(.system(size: 10))
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -2182,11 +2182,11 @@ struct SettingsPanel: View {
     }
 
     private var permissionsGroup: some View {
-        settingsGroup("Permissions", systemImage: "lock.shield") {
-            permissionRow(title: "Accessibility",
+        settingsGroup(L10n.text("Permissions"), systemImage: "lock.shield") {
+            permissionRow(title: L10n.text("Accessibility"),
                           granted: state.accessibilityGranted,
                           action: controller.openAccessibilityPrefs)
-            permissionRow(title: "Input Monitoring",
+            permissionRow(title: L10n.text("Input Monitoring"),
                           granted: state.inputMonitoringGranted,
                           action: controller.openInputMonitoringPrefs)
         }
@@ -2194,12 +2194,12 @@ struct SettingsPanel: View {
 
     private var settingsFooter: some View {
         HStack {
-            Button("Replay Welcome") { controller.showWelcome() }
+            Button(L10n.text("Replay Welcome")) { controller.showWelcome() }
                 .buttonStyle(.borderless)
                 .controlSize(.small)
                 .interactiveLift3D(intensity: 0.44, cornerRadius: 6)
             Spacer()
-            Button("Quit TinyRecorder") { controller.quit() }
+            Button(L10n.text("Quit TinyRecorder")) { controller.quit() }
                 .buttonStyle(.borderless)
                 .controlSize(.small)
                 .interactiveLift3D(intensity: 0.44, cornerRadius: 6)
@@ -2235,12 +2235,12 @@ struct SettingsPanel: View {
             if granted {
                 HStack(spacing: 4) {
                     Image(systemName: "checkmark.circle.fill")
-                    Text("Granted")
+                    Text(L10n.text("Granted"))
                 }
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(.green)
             } else {
-                Button("Grant…") { action() }
+                Button(L10n.text("Grant…")) { action() }
                     .buttonStyle(PillButtonStyle(tint: .blue))
             }
         }
@@ -2257,7 +2257,7 @@ struct SettingsPanel: View {
                     // Refuse keys owned by another global or a macro hotkey —
                     // double-registering the same Carbon key breaks both.
                     guard !taken.contains(newValue) else {
-                        state.statusMessage = "That key is already assigned."
+                        state.statusMessage = L10n.text("That key is already assigned.")
                         return
                     }
                     if let pair = fkeys.first(where: { $0.0 == newValue }) {
@@ -2266,7 +2266,7 @@ struct SettingsPanel: View {
                 }
             )) {
                 ForEach(fkeys, id: \.0) { pair in
-                    Text(taken.contains(pair.0) ? "\(pair.1) (in use)" : pair.1)
+                    Text(taken.contains(pair.0) ? L10n.text("%@ (in use)", String(describing: pair.1)) : pair.1)
                         .tag(pair.0)
                         .disabled(taken.contains(pair.0))
                 }

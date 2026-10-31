@@ -40,21 +40,21 @@ struct ActivityCenterView: View {
 
     private var title: String {
         switch mode {
-        case .countdown: return "Preparing to record"
-        case .recording: return "Recording"
-        case .playback:  return macro?.name ?? "Playing macro"
+        case .countdown: return L10n.text("Preparing to record")
+        case .recording: return L10n.text("Recording")
+        case .playback:  return macro?.name ?? L10n.text("Playing macro")
         }
     }
 
     private var subtitle: String {
         switch mode {
         case .countdown:
-            return "Switch to the app you want to capture"
+            return L10n.text("Switch to the app you want to capture")
         case .recording:
-            return "Listening for mouse and keyboard input"
+            return L10n.text("Listening for mouse and keyboard input")
         case .playback:
-            guard let macro else { return "Replaying captured input" }
-            return "\(macro.eventCount) events · \(formatActivityDuration(macro.duration)) · \(formatActivitySpeed(macro.speed))"
+            guard let macro else { return L10n.text("Replaying captured input") }
+            return L10n.text("%@ events · %@ · %@", String(describing: macro.eventCount), String(describing: formatActivityDuration(macro.duration)), String(describing: formatActivitySpeed(macro.speed)))
         }
     }
 
@@ -154,7 +154,7 @@ struct ActivityCenterView: View {
             if mode == .recording {
                 activityButton(
                     symbol: "trash",
-                    help: "Discard recording",
+                    help: L10n.text("Discard recording"),
                     tint: .secondary,
                     action: controller.cancelRecording
                 )
@@ -172,9 +172,9 @@ struct ActivityCenterView: View {
 
     private var primaryControlHelp: String {
         switch mode {
-        case .countdown: return "Cancel recording countdown"
-        case .recording: return "Stop and save recording"
-        case .playback:  return "Stop playback"
+        case .countdown: return L10n.text("Cancel recording countdown")
+        case .recording: return L10n.text("Stop and save recording")
+        case .playback:  return L10n.text("Stop playback")
         }
     }
 
@@ -212,50 +212,50 @@ struct ActivityCenterView: View {
     private var primaryDetail: String {
         switch mode {
         case .countdown:
-            return "Starting shortly"
+            return L10n.text("Starting shortly")
         case .recording:
-            return "\(formatActivityDuration(recorder.liveDuration)) recorded · \(recorder.eventCount) events"
+            return L10n.text("%@ recorded · %@ events", String(describing: formatActivityDuration(recorder.liveDuration)), String(describing: recorder.eventCount))
         case .playback:
             if player.isContinuous {
-                return "Loop \(max(1, player.currentLoop)) · Continuous"
+                return L10n.text("Loop %@ · Continuous", String(describing: max(1, player.currentLoop)))
             }
             let percent = Int((player.overallProgress * 100).rounded(.down))
-            return "\(percent)% done — \(remainingText)"
+            return L10n.text("%@%% done — %@", String(describing: percent), String(describing: remainingText))
         }
     }
 
     private var secondaryDetail: String {
         switch mode {
         case .countdown:
-            return "\(state.recordHotkey.name) cancel"
+            return L10n.text("%@ cancel", String(describing: state.recordHotkey.name))
         case .recording:
             let stats = recorder.liveStats
-            return "\(stats.clicks) clicks · \(stats.keys) keys"
+            return L10n.text("%@ clicks · %@ keys", String(describing: stats.clicks), String(describing: stats.keys))
         case .playback:
             let loop = max(1, player.currentLoop)
-            let events = "\(player.currentEvent)/\(max(1, player.totalEvents)) events"
+            let events = L10n.text("%@/%@ events", String(describing: player.currentEvent), String(describing: max(1, player.totalEvents)))
             return player.isContinuous
-                ? "\(events) · loop \(loop)"
-                : "\(events) · loop \(loop)/\(max(1, player.totalLoops))"
+                ? L10n.text("%@ · loop %@", String(describing: events), String(describing: loop))
+                : L10n.text("%@ · loop %@/%@", String(describing: events), String(describing: loop), String(describing: max(1, player.totalLoops)))
         }
     }
 
     private var remainingText: String {
-        guard let macro else { return "finishing soon" }
+        guard let macro else { return L10n.text("finishing soon") }
         let singleRun = macro.duration / max(0.1, macro.speed)
         let total = singleRun * Double(max(1, player.totalLoops))
         let remaining = total * (1 - player.overallProgress)
-        if remaining < 0.5 { return "finishing now" }
-        return "about \(formatActivityDuration(remaining)) remaining"
+        if remaining < 0.5 { return L10n.text("finishing now") }
+        return L10n.text("about %@ remaining", String(describing: formatActivityDuration(remaining)))
     }
 
     private var progressAccessibilityLabel: String {
         switch mode {
-        case .countdown: return "Preparing recording"
-        case .recording: return "Recording in progress, \(recorder.eventCount) events captured"
+        case .countdown: return L10n.text("Preparing recording")
+        case .recording: return L10n.text("Recording in progress, %@ events captured", String(describing: recorder.eventCount))
         case .playback:
-            if player.isContinuous { return "Continuous playback, loop \(max(1, player.currentLoop))" }
-            return "Playback \(Int((player.overallProgress * 100).rounded())) percent complete"
+            if player.isContinuous { return L10n.text("Continuous playback, loop %@", String(describing: max(1, player.currentLoop))) }
+            return L10n.text("Playback %@ percent complete", String(describing: Int((player.overallProgress * 100).rounded())))
         }
     }
 }
@@ -302,23 +302,23 @@ private struct ActivityProgressBar: View {
 
 private func formatActivityDuration(_ seconds: TimeInterval) -> String {
     let value = max(0, seconds.isFinite ? seconds : 0)
-    if value < 10 { return String(format: "%.1fs", value) }
-    if value < 60 { return "\(Int(value.rounded()))s" }
+    if value < 10 { return L10n.text("%.1fs", value) }
+    if value < 60 { return L10n.text("%@s", String(describing: Int(value.rounded()))) }
     if value >= 31_536_000 {
         let years = value / 31_536_000
-        if years >= 1_000_000 { return "over 1M years" }
-        return String(format: years < 10 ? "%.1fy" : "%.0fy", years)
+        if years >= 1_000_000 { return L10n.text("over 1M years") }
+        return L10n.text(years < 10 ? "%.1fy" : "%.0fy", years)
     }
     if value >= 86_400 {
         let days = Int(value / 86_400)
         let hours = Int(value.truncatingRemainder(dividingBy: 86_400)) / 3_600
-        return hours > 0 ? "\(days)d \(hours)h" : "\(days)d"
+        return hours > 0 ? L10n.text("%@d %@h", String(describing: days), String(describing: hours)) : L10n.text("%@d", String(describing: days))
     }
     let minutes = Int(value) / 60
     let remainder = Int(value) % 60
     if minutes < 60 { return String(format: "%d:%02d", minutes, remainder) }
     let hours = minutes / 60
-    return "\(hours)h \(minutes % 60)m"
+    return L10n.text("%@h %@m", String(describing: hours), String(describing: minutes % 60))
 }
 
 private func formatActivitySpeed(_ speed: Double) -> String {

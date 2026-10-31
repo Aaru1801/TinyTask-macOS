@@ -3,6 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "TinyRecorder",
+    defaultLocalization: "en",
     platforms: [.macOS(.v14)],
     products: [
         .executable(name: "TinyRecorder", targets: ["TinyRecorder"])
@@ -10,7 +11,8 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "TinyRecorder",
-            path: "Sources/TinyRecorder"
+            path: "Sources/TinyRecorder",
+            resources: [.process("Resources")]
         ),
         .testTarget(
             name: "TinyRecorderTests",

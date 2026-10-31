@@ -163,7 +163,7 @@ private struct CountdownView: View {
                     .font(.system(size: 130, weight: .heavy, design: .rounded))
                     .foregroundStyle(.primary)
                     .contentTransition(.numericText(countsDown: true))
-                Text("RECORDING IN")
+                Text(L10n.text("RECORDING IN"))
                     .font(.system(size: 11, weight: .heavy, design: .rounded))
                     .tracking(2.0)
                     .foregroundStyle(.secondary)
@@ -172,7 +172,7 @@ private struct CountdownView: View {
         }
         .frame(width: 280, height: 280)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Recording starts in \(model.remaining) seconds")
+        .accessibilityLabel(L10n.text("Recording starts in %@ seconds", String(describing: model.remaining)))
         .onAppear { pulse = true }
         .onChange(of: model.sessionSeed) {
             // Restart the pulse for each new countdown session.

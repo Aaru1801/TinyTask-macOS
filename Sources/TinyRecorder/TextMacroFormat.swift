@@ -87,7 +87,7 @@ enum TextMacroFormat {
         let rawLines = text.split(omittingEmptySubsequences: false, whereSeparator: { $0.isNewline })
         guard let first = rawLines.first(where: { !$0.trimmingCharacters(in: .whitespaces).isEmpty }),
               first.trimmingCharacters(in: .whitespaces).uppercased().hasPrefix("TINYRECORDER") else {
-            throw MacroImportError.notTextFormat("missing 'TINYRECORDER' header line.")
+            throw MacroImportError.notTextFormat(L10n.text("missing 'TINYRECORDER' header line."))
         }
 
         var events: [RecordedEvent] = []
@@ -145,7 +145,7 @@ enum TextMacroFormat {
         }
 
         guard !events.isEmpty else {
-            throw MacroImportError.notTextFormat("no events found.")
+            throw MacroImportError.notTextFormat(L10n.text("no events found."))
         }
         // Ensure a finite, non-decreasing timeline while preserving input order
         // for events with identical timestamps (e.g. a click pair).

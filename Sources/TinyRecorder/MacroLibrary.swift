@@ -131,11 +131,11 @@ enum LibraryFilter: Hashable {
 
     var label: String {
         switch self {
-        case .all:        return "All Macros"
-        case .favorites:  return "Favorites"
-        case .recent:     return "Recent"
-        case .mostPlayed: return "Most Played"
-        case .withHotkey: return "Has Hotkey"
+        case .all:        return L10n.text("All Macros")
+        case .favorites:  return L10n.text("Favorites")
+        case .recent:     return L10n.text("Recent")
+        case .mostPlayed: return L10n.text("Most Played")
+        case .withHotkey: return L10n.text("Has Hotkey")
         case .tag(let t): return t
         }
     }
@@ -372,7 +372,7 @@ final class MacroLibrary: ObservableObject {
 
     func rename(id: UUID, to name: String) {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        mutate(id) { $0.name = trimmed.isEmpty ? "Untitled" : trimmed }
+        mutate(id) { $0.name = trimmed.isEmpty ? L10n.text("Untitled") : trimmed }
     }
 
     func delete(id: UUID) {
@@ -405,7 +405,7 @@ final class MacroLibrary: ObservableObject {
         guard let src = macros.first(where: { $0.id == id }) else { return }
         var copy = src
         copy.id = UUID()
-        copy.name = src.name + " copy"
+        copy.name = src.name + L10n.text(" copy")
         copy.createdAt = Date()
         copy.modifiedAt = Date()
         copy.hotkey = nil // hotkey is unique
@@ -488,7 +488,7 @@ final class MacroLibrary: ObservableObject {
     private func autoName() -> String {
         let f = DateFormatter()
         f.dateFormat = "MMM d · HH:mm"
-        return "Macro " + f.string(from: Date())
+        return L10n.text("Macro ") + f.string(from: Date())
     }
 }
 
@@ -554,10 +554,10 @@ private final class LibraryPersistenceWriter: @unchecked Sendable {
 enum RelativeTime {
     static func string(from date: Date) -> String {
         let s = -date.timeIntervalSinceNow
-        if s < 60 { return "just now" }
-        if s < 3600 { return "\(Int(s / 60))m ago" }
-        if s < 86_400 { return "\(Int(s / 3600))h ago" }
-        if s < 604_800 { return "\(Int(s / 86_400))d ago" }
+        if s < 60 { return L10n.text("just now") }
+        if s < 3600 { return L10n.text("%@m ago", String(describing: Int(s / 60))) }
+        if s < 86_400 { return L10n.text("%@h ago", String(describing: Int(s / 3600))) }
+        if s < 604_800 { return L10n.text("%@d ago", String(describing: Int(s / 86_400))) }
         let f = DateFormatter()
         f.dateStyle = .medium
         return f.string(from: date)

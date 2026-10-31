@@ -101,8 +101,8 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
         guard let button = statusItem.button else { return }
         if recorder.isRecording {
             button.image = TinyIcons.recording
-            button.title = " REC"
-            button.setAccessibilityLabel("TinyRecorder — recording")
+            button.title = L10n.text(" REC")
+            button.setAccessibilityLabel(L10n.text("TinyRecorder — recording"))
         } else if player.isPlaying {
             button.image = TinyIcons.playing
             button.title = player.isContinuous
@@ -110,13 +110,13 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
                 : " \(Int((player.overallProgress * 100).rounded(.down)))%"
             let loop = max(1, player.currentLoop)
             let detail = player.isContinuous
-                ? "continuous playback, loop \(loop)"
-                : "\(Int((player.overallProgress * 100).rounded(.down))) percent, loop \(loop) of \(max(1, player.totalLoops))"
-            button.setAccessibilityLabel("TinyRecorder — playing, \(detail)")
+                ? L10n.text("continuous playback, loop %@", String(describing: loop))
+                : L10n.text("%@ percent, loop %@ of %@", String(describing: Int((player.overallProgress * 100).rounded(.down))), String(describing: loop), String(describing: max(1, player.totalLoops)))
+            button.setAccessibilityLabel(L10n.text("TinyRecorder — playing, %@", String(describing: detail)))
             let playingName = playingMacroID
                 .flatMap { id in library.macros.first(where: { $0.id == id })?.name }
-                ?? "macro"
-            button.toolTip = "Playing \(playingName) — \(detail)"
+                ?? L10n.text("macro")
+            button.toolTip = L10n.text("Playing %@ — %@", String(describing: playingName), String(describing: detail))
         } else {
             button.image = TinyIcons.idle
             button.title = ""
@@ -227,7 +227,7 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
             recorder.loadEvents(m.events)
         }
         hud?.hide()
-        state.statusMessage = "Recording discarded."
+        state.statusMessage = L10n.text("Recording discarded.")
         SoundController.shared.play(.error)
     }
 
@@ -264,16 +264,16 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
                 if self.recorder.isRecording {
                     self.recorder.stopRecording()
                     self.hud?.hide()
-                    activity = "Recording"
+                    activity = L10n.text("Recording")
                 } else if self.player.isPlaying || self.playbackPending {
                     self.stopPlayback()
-                    activity = "Playback"
+                    activity = L10n.text("Playback")
                 } else {
                     return
                 }
                 self.state.statusMessage = accessibilityGranted
-                    ? "\(activity) stopped — Input Monitoring permission was revoked."
-                    : "\(activity) stopped — Accessibility permission was revoked."
+                    ? L10n.text("%@ stopped — Input Monitoring permission was revoked.", String(describing: activity))
+                    : L10n.text("%@ stopped — Accessibility permission was revoked.", String(describing: activity))
                 SoundController.shared.play(.error)
             }
             .store(in: &cancellables)
@@ -360,7 +360,7 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
         library.select(id: id)
         if let m = library.currentMacro {
             recorder.loadEvents(m.events)
-            state.statusMessage = "Loaded \(m.name)."
+            state.statusMessage = L10n.text("Loaded %@.", String(describing: m.name))
         }
     }
 
@@ -457,7 +457,7 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
         if let countdown, countdown.isActive {
             countdown.cancel()
             state.recordingCountdownActive = false
-            state.statusMessage = "Recording cancelled."
+            state.statusMessage = L10n.text("Recording cancelled.")
             performHaptic(.alignment)
             return
         }
@@ -466,11 +466,11 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
             let count = recorder.eventCount
             if count > 0 {
                 let newMacro = library.add(events: recorder.events, loops: state.loops)
-                state.statusMessage = "Saved \(newMacro.name) · \(count) events."
+                state.statusMessage = L10n.text("Saved %@ · %@ events.", String(describing: newMacro.name), String(describing: count))
                 SoundController.shared.play(.recordStop)
                 performHaptic(.levelChange)
             } else {
-                state.statusMessage = "No events captured."
+                state.statusMessage = L10n.text("No events captured.")
                 performHaptic(.alignment)
                 // Don't leave an empty buffer that a later persist would write
                 // over the selected macro — restore it.
@@ -489,7 +489,7 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
         // Fail immediately instead of making the user sit through a countdown
         // before discovering that macOS cannot start the capture.
         guard state.inputMonitoringGranted else {
-            state.statusMessage = "Input Monitoring permission is required to record."
+            state.statusMessage = L10n.text("Input Monitoring permission is required to record.")
             SoundController.shared.play(.error)
             return
         }
@@ -513,18 +513,18 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
     private func actuallyStartRecording() {
         state.recordingCountdownActive = false
         guard state.inputMonitoringGranted else {
-            state.statusMessage = "Could not start recording. Grant Input Monitoring permission."
+            state.statusMessage = L10n.text("Could not start recording. Grant Input Monitoring permission.")
             SoundController.shared.play(.error)
             return
         }
         let ok = recorder.startRecording()
         if ok {
             if state.showRecordingHUD { hud?.show() }
-            state.statusMessage = "Recording…"
+            state.statusMessage = L10n.text("Recording…")
             SoundController.shared.play(.recordStart)
             performHaptic(.generic)
         } else {
-            state.statusMessage = "Could not start recording. Check Input Monitoring permission."
+            state.statusMessage = L10n.text("Could not start recording. Check Input Monitoring permission.")
             SoundController.shared.play(.error)
         }
     }
@@ -539,7 +539,7 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
             return
         }
         if player.isPlaying || playbackPending { stopPlayback() }
-        state.statusMessage = "Stopped."
+        state.statusMessage = L10n.text("Stopped.")
     }
 
     /// The global stop hotkey is intentionally stronger than File → Stop. It is
@@ -553,7 +553,7 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
             return
         }
         if player.isPlaying || playbackPending { stopPlayback() }
-        state.statusMessage = "Emergency stop."
+        state.statusMessage = L10n.text("Emergency stop.")
     }
 
     private func stopPlayback() {
@@ -572,17 +572,17 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
 
     private func play(isChained: Bool) {
         guard state.accessibilityGranted else {
-            state.statusMessage = "Playback requires Accessibility permission."
+            state.statusMessage = L10n.text("Playback requires Accessibility permission.")
             SoundController.shared.play(.error)
             return
         }
         guard state.inputMonitoringGranted else {
-            state.statusMessage = "Playback requires Input Monitoring to stop when you use the mouse or keyboard."
+            state.statusMessage = L10n.text("Playback requires Input Monitoring to stop when you use the mouse or keyboard.")
             SoundController.shared.play(.error)
             return
         }
         guard !recorder.events.isEmpty else {
-            state.statusMessage = "Nothing to play. Record first."
+            state.statusMessage = L10n.text("Nothing to play. Record first.")
             return
         }
         // A pending record countdown and playback can't coexist — the recorder
@@ -595,13 +595,13 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
         if player.isPlaying || playbackPending { return }
         if !isChained { chainVisited.removeAll() }
         let macro = library.currentMacro
-        let name = macro?.name ?? "macro"
+        let name = macro?.name ?? L10n.text("macro")
         let loops = macro?.loops ?? state.loops
         let speed = macro?.speed ?? state.speed
         let events = recorder.events
         state.statusMessage = loops <= 0
-            ? "Playing \(name) on loop…"
-            : "Playing \(name) · ×\(loops)…"
+            ? L10n.text("Playing %@ on loop…", String(describing: name))
+            : L10n.text("Playing %@ · ×%@…", String(describing: name), String(describing: loops))
         playingMacroID = macro?.id
         if let id = macro?.id { chainVisited.insert(id) }
 
@@ -625,9 +625,9 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
                 self.stopPlayback()
                 switch reason {
                 case .userInput:
-                    self.state.statusMessage = "Playback stopped — mouse or keyboard input detected."
+                    self.state.statusMessage = L10n.text("Playback stopped — mouse or keyboard input detected.")
                 case .inputMonitoringUnavailable:
-                    self.state.statusMessage = "Could not monitor input. Check Input Monitoring permission before playing."
+                    self.state.statusMessage = L10n.text("Could not monitor input. Check Input Monitoring permission before playing.")
                     SoundController.shared.play(.error)
                 }
             }) { [weak self] finished in
@@ -649,15 +649,15 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
 
                 if let id = chainID, let next = self.library.macros.first(where: { $0.id == id }) {
                     guard !self.chainVisited.contains(id) else {
-                        self.state.statusMessage = "Chain stopped (loop detected)."
+                        self.state.statusMessage = L10n.text("Chain stopped (loop detected).")
                         return
                     }
-                    self.state.statusMessage = "Chaining to \(next.name)…"
+                    self.state.statusMessage = L10n.text("Chaining to %@…", String(describing: next.name))
                     self.library.select(id: next.id)
                     self.recorder.loadEvents(next.events)
                     self.play(isChained: true)
                 } else {
-                    self.state.statusMessage = "Playback finished."
+                    self.state.statusMessage = L10n.text("Playback finished.")
                 }
             }
         }
@@ -703,7 +703,7 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
     private func stopPlaybackBeforePresenting(_ destination: String) {
         guard player.isPlaying || playbackPending else { return }
         stopPlayback()
-        state.statusMessage = "Playback stopped to open \(destination)."
+        state.statusMessage = L10n.text("Playback stopped to open %@.", String(describing: destination))
     }
 
     /// Play a specific saved macro by id (used by per-macro hotkeys + library card buttons).
@@ -725,7 +725,7 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
     /// or native `.tinyrec`/`.json`. Dispatches on extension, falling back to a
     /// content sniff so a mislabeled file still has a chance.
     func importMacro(at url: URL) {
-        stopPlaybackBeforePresenting("Import")
+        stopPlaybackBeforePresenting(L10n.text("Import"))
         // Finder drops and file-open events may arrive while a recording is
         // active. Save that capture before replacing the recorder buffer.
         if recorder.isRecording { toggleRecording() }
@@ -743,7 +743,7 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
                         copy.hotkey = nil
                         self.library.insert(copy)
                         self.recorder.loadEvents(copy.events)
-                        self.state.statusMessage = "Imported \(copy.name)."
+                        self.state.statusMessage = L10n.text("Imported %@.", String(describing: copy.name))
                     }
                     return
                 }
@@ -760,7 +760,7 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
                 result = try TinyTaskImporter.parse(data)
             case "txt", "trm":
                 guard let text = String(data: data, encoding: .utf8) else {
-                    throw MacroImportError.notTextFormat("file is not UTF-8 text.")
+                    throw MacroImportError.notTextFormat(L10n.text("file is not UTF-8 text."))
                 }
                 result = try TextMacroFormat.parse(text)
             default:
@@ -774,7 +774,7 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
                 } else if let macro = try? JSONDecoder().decode(Macro.self, from: data) {
                     result = MacroImportResult(events: macro.events, parsed: macro.events.count, skipped: 0, warning: nil)
                 } else {
-                    throw MacroImportError.unreadable("Unrecognized macro file format.")
+                    throw MacroImportError.unreadable(L10n.text("Unrecognized macro file format."))
                 }
             }
 
@@ -783,7 +783,7 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
                          warning: result.warning ?? (result.skipped > 0 ? result.summary : nil))
         } catch {
             DispatchQueue.main.async {
-                self.state.statusMessage = "Import failed: \(error.localizedDescription)"
+                self.state.statusMessage = L10n.text("Import failed: %@", String(describing: error.localizedDescription))
                 SoundController.shared.play(.error)
             }
         }
@@ -794,9 +794,9 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
             let imported = self.library.add(events: events, name: name)
             self.recorder.loadEvents(imported.events)
             if let warning {
-                self.state.statusMessage = "Imported \(imported.name) — \(warning)"
+                self.state.statusMessage = L10n.text("Imported %@ — %@", String(describing: imported.name), String(describing: warning))
             } else {
-                self.state.statusMessage = "Imported \(imported.name) · \(events.count) events."
+                self.state.statusMessage = L10n.text("Imported %@ · %@ events.", String(describing: imported.name), String(describing: events.count))
             }
         }
     }
@@ -804,12 +804,12 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
     /// Export the current macro as a hand-editable `.txt` (TRM) file.
     func exportAsText() {
         guard !recorder.events.isEmpty else {
-            state.statusMessage = "Nothing to export."
+            state.statusMessage = L10n.text("Nothing to export.")
             return
         }
-        stopPlaybackBeforePresenting("Export")
+        stopPlaybackBeforePresenting(L10n.text("Export"))
         let panel = NSSavePanel()
-        panel.title = "Export as Text"
+        panel.title = L10n.text("Export as Text")
         let baseName = library.currentMacro?.name ?? defaultMacroName()
         panel.nameFieldStringValue = safeFileName(baseName) + ".txt"
         if let ut = UTType(filenameExtension: "txt") {
@@ -824,9 +824,9 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
                 let text = TextMacroFormat.export(self.recorder.events)
                 try text.write(to: url, atomically: true, encoding: .utf8)
                 self.restrictPermissions(url)
-                self.state.statusMessage = "Exported \(url.lastPathComponent)."
+                self.state.statusMessage = L10n.text("Exported %@.", String(describing: url.lastPathComponent))
             } catch {
-                self.state.statusMessage = "Export failed: \(error.localizedDescription)"
+                self.state.statusMessage = L10n.text("Export failed: %@", String(describing: error.localizedDescription))
             }
         }
     }
@@ -834,9 +834,9 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
     /// Export a specific macro (by id) as a `.txt` (TRM) file.
     func exportMacroAsText(_ id: UUID) {
         guard let macro = library.macros.first(where: { $0.id == id }) else { return }
-        stopPlaybackBeforePresenting("Export")
+        stopPlaybackBeforePresenting(L10n.text("Export"))
         let panel = NSSavePanel()
-        panel.title = "Export \(macro.name) as Text"
+        panel.title = L10n.text("Export %@ as Text", String(describing: macro.name))
         panel.nameFieldStringValue = safeFileName(macro.name) + ".txt"
         if let ut = UTType(filenameExtension: "txt") {
             panel.allowedContentTypes = [ut]
@@ -849,18 +849,18 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
                 let text = TextMacroFormat.export(macro.events)
                 try text.write(to: url, atomically: true, encoding: .utf8)
                 self.restrictPermissions(url)
-                self.state.statusMessage = "Exported \(url.lastPathComponent)."
+                self.state.statusMessage = L10n.text("Exported %@.", String(describing: url.lastPathComponent))
             } catch {
-                self.state.statusMessage = "Export failed: \(error.localizedDescription)"
+                self.state.statusMessage = L10n.text("Export failed: %@", String(describing: error.localizedDescription))
             }
         }
     }
 
     func open() {
-        stopPlaybackBeforePresenting("Import")
+        stopPlaybackBeforePresenting(L10n.text("Import"))
         let panel = NSOpenPanel()
-        panel.title = "Import Macro"
-        panel.message = "Import a TinyRecorder (.tinyrec), TinyTask (.rec), or text (.txt) macro."
+        panel.title = L10n.text("Import Macro")
+        panel.message = L10n.text("Import a TinyRecorder (.tinyrec), TinyTask (.rec), or text (.txt) macro.")
         panel.allowsMultipleSelection = true
         panel.canChooseDirectories = false
         let exts = ["tinyrec", "rec", "txt", "trm"]
@@ -904,12 +904,12 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
 
     func exportAsScript() {
         guard !recorder.events.isEmpty else {
-            state.statusMessage = "Nothing to export."
+            state.statusMessage = L10n.text("Nothing to export.")
             return
         }
-        stopPlaybackBeforePresenting("Export")
+        stopPlaybackBeforePresenting(L10n.text("Export"))
         let panel = NSSavePanel()
-        panel.title = "Export as Shell Script"
+        panel.title = L10n.text("Export as Shell Script")
         let baseName = library.currentMacro?.name ?? defaultMacroName()
         panel.nameFieldStringValue = safeFileName(baseName) + ".command"
         if let ut = UTType(filenameExtension: "command") {
@@ -951,9 +951,9 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
                 """
                 try script.write(to: url, atomically: true, encoding: .utf8)
                 self.restrictPermissions(url, executable: true)
-                self.state.statusMessage = "Exported \(url.lastPathComponent)."
+                self.state.statusMessage = L10n.text("Exported %@.", String(describing: url.lastPathComponent))
             } catch {
-                self.state.statusMessage = "Export failed: \(error.localizedDescription)"
+                self.state.statusMessage = L10n.text("Export failed: %@", String(describing: error.localizedDescription))
             }
         }
     }
@@ -961,9 +961,9 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
     /// Export a specific macro (from card menu).
     func exportMacroToFile(_ id: UUID) {
         guard let macro = library.macros.first(where: { $0.id == id }) else { return }
-        stopPlaybackBeforePresenting("Export")
+        stopPlaybackBeforePresenting(L10n.text("Export"))
         let panel = NSSavePanel()
-        panel.title = "Export \(macro.name)"
+        panel.title = L10n.text("Export %@", String(describing: macro.name))
         panel.nameFieldStringValue = safeFileName(macro.name) + ".tinyrec"
         if let ut = UTType(filenameExtension: "tinyrec") {
             panel.allowedContentTypes = [ut]
@@ -978,16 +978,16 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
                 let data = try enc.encode(macro)
                 try data.write(to: url, options: .atomic)
                 self.restrictPermissions(url)
-                self.state.statusMessage = "Exported \(url.lastPathComponent)."
+                self.state.statusMessage = L10n.text("Exported %@.", String(describing: url.lastPathComponent))
             } catch {
-                self.state.statusMessage = "Export failed: \(error.localizedDescription)"
+                self.state.statusMessage = L10n.text("Export failed: %@", String(describing: error.localizedDescription))
             }
         }
     }
 
     func persistEdits() {
         persistCurrentMacroIfNeeded()
-        state.statusMessage = "Saved."
+        state.statusMessage = L10n.text("Saved.")
     }
 
     private func defaultMacroName() -> String {
@@ -1003,7 +1003,7 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
     // MARK: - Editor
 
     func openEditor() {
-        stopPlaybackBeforePresenting("the editor")
+        stopPlaybackBeforePresenting(L10n.text("the editor"))
         if popover.isShown { popover.performClose(nil) }
         if editorWC == nil {
             let view = EditorView(controller: self)
@@ -1028,13 +1028,13 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
     /// Switch between Dock app (`.regular`) and menu-bar-only (`.accessory`) live.
     func setMenuBarOnly(_ menuBarOnly: Bool) {
         guard menuBarOnly != state.menuBarOnly else { return }
-        stopPlaybackBeforePresenting("appearance settings")
+        stopPlaybackBeforePresenting(L10n.text("appearance settings"))
         state.menuBarOnly = menuBarOnly
         NSApp.setActivationPolicy(menuBarOnly ? .accessory : .regular)
         if menuBarOnly {
             // No Dock icon now — flash the menu-bar popover so the control surface
             // is discoverable, then leave the user there.
-            state.statusMessage = "Menu-bar only. Click the menu-bar icon to open TinyRecorder."
+            state.statusMessage = L10n.text("Menu-bar only. Click the menu-bar icon to open TinyRecorder.")
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
                 self?.showPopoverProgrammatically()
             }
@@ -1055,7 +1055,7 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
     /// can show it after an appearance switch).
     var showMainWindowHandler: (() -> Void)?
     func showMainWindow() {
-        stopPlaybackBeforePresenting("the library")
+        stopPlaybackBeforePresenting(L10n.text("the library"))
         showMainWindowHandler?()
     }
 
@@ -1063,11 +1063,11 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
     /// mode, then notify that surface after AppKit has made it visible.
     func presentQuickRun() {
         guard !recorder.isRecording, !state.recordingCountdownActive else {
-            state.statusMessage = "Quick Run is unavailable during recording."
+            state.statusMessage = L10n.text("Quick Run is unavailable during recording.")
             performHaptic(.alignment)
             return
         }
-        stopPlaybackBeforePresenting("Quick Run")
+        stopPlaybackBeforePresenting(L10n.text("Quick Run"))
         let targetIsWindow = !state.menuBarOnly
         if state.menuBarOnly {
             showPopoverProgrammatically()
@@ -1086,7 +1086,7 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
     // MARK: - Settings window
 
     func showSettingsWindow() {
-        stopPlaybackBeforePresenting("Settings")
+        stopPlaybackBeforePresenting(L10n.text("Settings"))
         if popover.isShown { popover.performClose(nil) }
         if settingsWC == nil {
             settingsWC = SettingsWindowController(controller: self)
@@ -1117,7 +1117,7 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
     }
 
     func showWelcome() {
-        stopPlaybackBeforePresenting("Welcome")
+        stopPlaybackBeforePresenting(L10n.text("Welcome"))
         // Force-show even if already complete.
         welcomeWC = WelcomeWindowController(controller: self, onDone: { [weak self] in
             self?.welcomeWC?.window?.performClose(nil)
@@ -1148,27 +1148,27 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
     }
 
     func openAccessibilityPrefs() {
-        stopPlaybackBeforePresenting("System Settings")
+        stopPlaybackBeforePresenting(L10n.text("System Settings"))
         if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
             NSWorkspace.shared.open(url)
         }
     }
 
     func openInputMonitoringPrefs() {
-        stopPlaybackBeforePresenting("System Settings")
+        stopPlaybackBeforePresenting(L10n.text("System Settings"))
         if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent") {
             NSWorkspace.shared.open(url)
         }
     }
 
     func showAbout() {
-        stopPlaybackBeforePresenting("About")
+        stopPlaybackBeforePresenting(L10n.text("About"))
         NSApp.activate(ignoringOtherApps: true)
         NSApp.orderFrontStandardAboutPanel(nil)
     }
 
     func showHelp() {
-        stopPlaybackBeforePresenting("Help")
+        stopPlaybackBeforePresenting(L10n.text("Help"))
         if let url = URL(string: "https://github.com/Aaru1801/TinyTask-macOS#readme") {
             NSWorkspace.shared.open(url)
         }
@@ -1196,6 +1196,6 @@ enum TinyIcons {
         return img
     }
     static var idle: NSImage? { make("record.circle", description: "TinyRecorder") }
-    static var recording: NSImage? { make("record.circle.fill", description: "TinyRecorder — recording", color: .systemRed) }
-    static var playing: NSImage? { make("play.circle.fill", description: "TinyRecorder — playing", color: .systemGreen) }
+    static var recording: NSImage? { make("record.circle.fill", description: L10n.text("TinyRecorder — recording"), color: .systemRed) }
+    static var playing: NSImage? { make("play.circle.fill", description: L10n.text("TinyRecorder — playing"), color: .systemGreen) }
 }

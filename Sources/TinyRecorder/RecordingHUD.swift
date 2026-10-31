@@ -144,7 +144,7 @@ struct RecordingHUDView: View {
             VStack(alignment: .leading, spacing: 16) {
                 HStack(spacing: 8) {
                     RecDot(size: 8, color: Brand.red400)
-                    Text("Recording")
+                    Text(L10n.text("Recording"))
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(.white.opacity(0.90))
                     Spacer()
@@ -167,17 +167,17 @@ struct RecordingHUDView: View {
                 .minimumScaleFactor(0.7)
                 .contentTransition(reduceMotion ? .identity : .numericText())
                 .accessibilityElement(children: .ignore)
-                .accessibilityLabel("Recording duration")
-                .accessibilityValue("\(Int(recorder.liveDuration)) seconds")
+                .accessibilityLabel(L10n.text("Recording duration"))
+                .accessibilityValue(L10n.text("%@ seconds", String(describing: Int(recorder.liveDuration))))
 
                 VStack(spacing: 8) {
                     LiveWaveform(events: recorder.events)
                         .frame(height: 30)
                         .accessibilityHidden(true)
                     HStack {
-                        Text("Input activity")
+                        Text(L10n.text("Input activity"))
                         Spacer()
-                        Text("\(recorder.eventCount) events")
+                        Text(L10n.text("%@ events", String(describing: recorder.eventCount)))
                             .monospacedDigit()
                     }
                     .font(.system(size: 11))
@@ -189,16 +189,16 @@ struct RecordingHUDView: View {
                     .frame(height: 1)
 
                 HStack(spacing: 12) {
-                    HUDStat(value: s.clicks, label: "Clicks")
-                    HUDStat(value: s.keys, label: "Keys")
-                    HUDStat(value: s.scrolls, label: "Scrolls")
-                    HUDStat(value: s.drags, label: "Drags")
+                    HUDStat(value: s.clicks, label: L10n.text("Clicks"))
+                    HUDStat(value: s.keys, label: L10n.text("Keys"))
+                    HUDStat(value: s.scrolls, label: L10n.text("Scrolls"))
+                    HUDStat(value: s.drags, label: L10n.text("Drags"))
                 }
 
                 HStack(spacing: 8) {
-                    HUDButton(title: "Discard", icon: "trash", shortcut: emergencyHotkeyName, tint: nil, action: onDiscard)
-                    HUDButton(title: "Stop", icon: "stop.fill", shortcut: stopHotkeyName, tint: Brand.red500, action: onStop)
-                        .help("Stop and save recording")
+                    HUDButton(title: L10n.text("Discard"), icon: "trash", shortcut: emergencyHotkeyName, tint: nil, action: onDiscard)
+                    HUDButton(title: L10n.text("Stop"), icon: "stop.fill", shortcut: stopHotkeyName, tint: Brand.red500, action: onStop)
+                        .help(L10n.text("Stop and save recording"))
                 }
             }
             .padding(18)
@@ -312,7 +312,7 @@ private struct HUDButton: View {
         }
         .buttonStyle(.plain)
         .onHover { hovered = $0 }
-        .accessibilityLabel(title == "Stop" ? "Stop and save recording" : "Discard recording")
-        .accessibilityHint("Shortcut \(shortcut)")
+        .accessibilityLabel(title == L10n.text("Stop") ? L10n.text("Stop and save recording") : L10n.text("Discard recording"))
+        .accessibilityHint(L10n.text("Shortcut %@", String(describing: shortcut)))
     }
 }
